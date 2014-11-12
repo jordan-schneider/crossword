@@ -79,6 +79,8 @@ class Board:
 
     def __init__(self, width, height):
         """Initialize a new crossword board."""
+        self.width = width
+        self.height = height
         self.cells = []
         for y in range(height):
             self.cells.append(list())
@@ -89,13 +91,14 @@ class Board:
 
     def select(self, x, y):
         """Set the selected square."""
-        for row in self.cells:
-            for cell in row:
-                if cell.selected:
-                    cell.selected = False
-                    cell.draw()
-        self.cells[y][x].selected = True
-        self.cells[y][x].draw()
+        if 0 < x < self.width and 0 < y < self.height:
+            for row in self.cells:
+                for cell in row:
+                    if cell.selected:
+                        cell.selected = False
+                        cell.draw()
+            self.cells[y][x].selected = True
+            self.cells[y][x].draw()
 
         self.selected = (x, y)
 
@@ -211,8 +214,6 @@ class Game:
                 while self.board[x, y].type == BLACK_CELL:
                     x = (x+1) % self.puzzle.height
                 self.board.select(x, y)
-                
-
                                     
 g = Game()
 g.build()
