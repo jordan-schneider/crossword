@@ -66,8 +66,9 @@ class Cell:
 
             if self.number:
                 self.number_id = self.canvas.create_text(
-                    self.x1+5*CELL_WIDTH//6, self.y1+CELL_HEIGHT//6,
-                    text=self.number, font=("Arial", int(CELL_HEIGHT/3.5)))
+                    self.x1+4*CELL_WIDTH//5, self.y1+CELL_HEIGHT//5,
+                    text=self.number,
+                    font=("TkDefaultFont", int(CELL_HEIGHT/3.5)))
             
         if self.type == BLACK_CELL:
             self.canvas.create_rectangle(self.x1, self.y1, self.x2, self.y2,
@@ -120,8 +121,9 @@ class Game:
 
         self.canvas = tkinter.Canvas(self.window, width=500, height=500)
         self.canvas.pack(side="left", fill="y")
-        self.listbox = tkinter.Listbox(self.window)
-        self.listbox.pack(side="right", fill="y")
+        self.listbox = tkinter.Listbox(self.window, width=40, borderwidth=0,
+                                       font=("TkDefaultFont", 13))
+        self.listbox.pack(side="right", fill="y", pady=4)
 
         self.canvas.bind("<Button-1>", self.click)
         self.window.bind_all("<Key>", self.key)
@@ -145,6 +147,12 @@ class Game:
         numbering = self.puzzle.clue_numbering()
         numbers = {w["cell"]: w["num"] for w in numbering.across}
         numbers.update({w["cell"]: w["num"] for w in numbering.down})
+        clues = (
+            ["Across"] +
+            ["%i. %s" % (w["num"], w["clue"]) for w in numbering.across] +
+            [" ", "Down"] +
+            ["%i. %s" % (w["num"], w["clue"]) for w in numbering.down]
+        )
         
         for y in range(self.puzzle.height):
             for x in range(self.puzzle.width):
@@ -161,6 +169,9 @@ class Game:
                 cell.draw()
 
         self.board.select(0, 0)
+
+        for clue in clues:
+            self.listbox.insert("end", clue)
 
     def click(self, event):
         """On click event for the crossword puzzle."""
