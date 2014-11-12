@@ -1,19 +1,10 @@
 # Crossword
 # Noah Kim, Jordan Schneider
 
-# Logging
-import logging
-from logging import FATAL, CRITICAL, ERROR, WARNING, INFO, DEBUG, NOTSET
-FORMAT = "%(asctime)s %(levelname)s: %(message)s"
-DATEFMT = "%m/%d/%y %I:%M:%S %p"
-LEVEL = NOTSET
-logging.basicConfig(format=FORMAT, datefmt=DATEFMT, level=LEVEL)
-
 # Import
 import tkinter
 import string
 
-# Local
 import puz
 
 # Constant
@@ -22,6 +13,13 @@ CANVAS_MARGIN_OUTER = 6
 
 CELL_WIDTH = 35
 CELL_HEIGHT = 35
+LETTER_CELL_FILL = "white"
+LETTER_CELL_SELECT_FILL = "grey85"
+BLACK_CELL_FILL = "black"
+CELL_LETTER_FONT = ("TkDefaultFont", int(CELL_HEIGHT / 1.8))
+CELL_NUMBER_FONT = ("TkDefaultFont", int(CELL_HEIGHT / 3.5))
+
+TEXT_FONT = ("TkDefaultFont", 13)
 
 LETTER_CELL = "-"
 BLACK_CELL = "."
@@ -91,7 +89,7 @@ class Board:
 
     def select(self, x, y):
         """Set the selected square."""
-        if 0 < x < self.width and 0 < y < self.height:
+        if 0 <= x < self.width and 0 <= y < self.height:
             for row in self.cells:
                 for cell in row:
                     if cell.selected:
@@ -124,9 +122,9 @@ class Game:
 
         self.canvas = tkinter.Canvas(self.window, width=500, height=500)
         self.canvas.pack(side="left", fill="y")
-        self.listbox = tkinter.Listbox(self.window, width=40, borderwidth=0,
-                                       font=("TkDefaultFont", 13))
-        self.listbox.pack(side="right", fill="y", pady=4)
+        self.text = tkinter.Text(self.window, width=40, borderwidth=0,
+                                 font=("TkDefaultFont", 13))
+        self.text.pack(side="right", fill="y", pady=4)
 
         self.canvas.bind("<Button-1>", self.click)
         self.window.bind_all("<Key>", self.key)
@@ -173,8 +171,8 @@ class Game:
 
         self.board.select(0, 0)
 
-        for clue in clues:
-            self.listbox.insert("end", clue)
+        self.text.insert("end", "\n".join(clues))
+        self.text.config(state="disabled")
 
     def click(self, event):
         """On click event for the crossword puzzle."""
@@ -217,5 +215,5 @@ class Game:
                                     
 g = Game()
 g.build()
-p = puz.read("Nov0705.puz")
+p = puz.read("puzzles/Nov0705.puz")
 g.load(p)
