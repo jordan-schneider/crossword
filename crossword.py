@@ -23,7 +23,6 @@ CANVAS_MARGIN_OUTER = 6
 CELL_WIDTH = 35
 CELL_HEIGHT = 35
 
-
 LETTER_CELL = "-"
 BLACK_CELL = "."
 
@@ -74,13 +73,6 @@ class Cell:
             self.canvas.create_rectangle(self.x1, self.y1, self.x2, self.y2,
                                          fill="black")
 
-class Word:
-    """Playable crossword word."""
-
-    def __init__(self, word, cells):
-        self.word = word
-        self.cells = cells
-
 class Board:
     """Basic interpretation of the puz crossword board."""
 
@@ -94,7 +86,7 @@ class Board:
 
         self.selected = ()
 
-    def set_selected(self, x, y):
+    def select(self, x, y):
         """Set the selected square."""
         for row in self.cells:
             for cell in row:
@@ -168,13 +160,13 @@ class Game:
                 self.board[x, y] = cell
                 cell.draw()
 
-        self.board.set_selected(0, 0)
+        self.board.select(0, 0)
 
     def click(self, event):
         """On click event for the crossword puzzle."""
         x = (event.x - CANVAS_MARGIN_INNER - 1) // (CELL_WIDTH + 1)
         y = (event.y - CANVAS_MARGIN_INNER - 1) // (CELL_HEIGHT + 1)
-        self.board.set_selected(x, y)
+        self.board.select(x, y)
 
     def key(self, event):
         """On key event for the crossword puzzle."""
@@ -182,29 +174,32 @@ class Game:
             x, y = self.board.selected
             self.board[x, y].letter = event.char.capitalize()
             self.board[x, y].draw()
-           
+        if event.keysym == "BackSpace":
+            x, y = self.board.selected
+            self.board[x, y].letter = " "
+            self.board[x, y].draw()           
         else:
             x, y = self.board.selected
             if event.keysym == "Up":
                 y = (y-1) % self.puzzle.height
                 while self.board[x, y].type == BLACK_CELL:
                     y = (y-1) % self.puzzle.height
-                self.board.set_selected(x, y)
+                self.board.select(x, y)
             if event.keysym == "Down":
                 y = (y+1) % self.puzzle.height
                 while self.board[x, y].type == BLACK_CELL:
                     y = (y+1) % self.puzzle.height
-                self.board.set_selected(x, y)
+                self.board.select(x, y)
             if event.keysym == "Left":
                 x = (x-1) % self.puzzle.height
                 while self.board[x, y].type == BLACK_CELL:
                     x = (x-1) % self.puzzle.height
-                self.board.set_selected(x, y)
+                self.board.select(x, y)
             if event.keysym == "Right":
                 x = (x+1) % self.puzzle.height
                 while self.board[x, y].type == BLACK_CELL:
                     x = (x+1) % self.puzzle.height
-                self.board.set_selected(x, y)
+                self.board.select(x, y)
                 
 
                                     
