@@ -11,6 +11,7 @@ logging.basicConfig(format=FORMAT, datefmt=DATEFMT, level=LEVEL)
 
 # Import
 import tkinter
+import string
 
 # Local
 import puz
@@ -19,8 +20,8 @@ import puz
 CANVAS_MARGIN_INNER = 6
 CANVAS_MARGIN_OUTER = 6
 
-CELL_WIDTH = 30
-CELL_HEIGHT = 30
+CELL_WIDTH = 35
+CELL_HEIGHT = 35
 
 
 LETTER_CELL = "-"
@@ -37,22 +38,37 @@ class Cell:
         self.y1 = y1
         self.x2 = x2
         self.y2 = y2
-        self.type = type # Letter or black
+        self.type = type
         self.letter = letter
         self.number = number
 
-        self.letter_id = 0 # The canvas numerically id's drawings
+        self.square_id = 0
+        self.letter_id = 0
         self.number_id = 0
+        self.fill_id = 0
+
+        self.selected = False
 
     def draw(self):
         """Draw cell onto the canvas."""
+        self.canvas.delete(self.square_id, self.letter_id, self.number_id,
+                           self.fill_id)
+                    
         if self.type == LETTER_CELL:
-            self.letter_id = self.canvas.create_rectangle(
+            if self.selected:
+                self.fill_id = self.canvas.create_rectangle(
+                    self.x1, self.y1, self.x2, self.y2, fill="grey85")
+                    
+            self.square_id = self.canvas.create_rectangle(
                 self.x1, self.y1, self.x2, self.y2)
+            self.letter_id = self.canvas.create_text(
+                (self.x1+self.x2)/2, (self.y1+self.y2)/2, text=self.letter,
+                font=("Arial", int(CELL_HEIGHT/1.8)))
+
             if self.number:
                 self.number_id = self.canvas.create_text(
-                    (self.x1+self.x2)/2, (self.y1+self.y2)/2, text=self.letter,
-                    font=("Arial", ((self.y1+self.y2)//2)))
+                    self.x1+5*CELL_WIDTH//6, self.y1+CELL_HEIGHT//6,
+                    text=self.number, font=("Arial", int(CELL_HEIGHT/3.5)))
             
         if self.type == BLACK_CELL:
             self.canvas.create_rectangle(self.x1, self.y1, self.x2, self.y2,
@@ -76,11 +92,25 @@ class Board:
             for x in range(width):
                 self.cells[y].append(" ")
 
+        self.selected = ()
+
+    def set_selected(self, x, y):
+        """Set the selected square."""
+        for row in self.cells:
+            for cell in row:
+                if cell.selected:
+                    cell.selected = False
+                    cell.draw()
+        self.cells[y][x].selected = True
+        self.cells[y][x].draw()
+
+        self.selected = (x, y)
+
     def __setitem__(self, position, value):
         """Board[x, y] = value"""
         self.cells[position[1]][position[0]] = value
     
-    def __getitem__(self, position, value):
+    def __getitem__(self, position):
         """Board[x, y]"""
         return self.cells[position[1]][position[0]]
     
@@ -93,12 +123,18 @@ class Game:
     def build(self):
         """Build the graphical interface for the game."""
         self.window = tkinter.Tk()
+        self.window.resizable(False, False)
         self.window.title("New York Times Crossword")
 
         self.canvas = tkinter.Canvas(self.window, width=500, height=500)
         self.canvas.pack(side="left", fill="y")
         self.listbox = tkinter.Listbox(self.window)
         self.listbox.pack(side="right", fill="y")
+
+        self.canvas.bind("<Button-1>", self.click)
+        self.window.bind_all("<Key>", self.key)
+
+        self.selection = [0, 0]
 
     def load(self, puzzle):
         """Setup the game with a puzzle object."""
@@ -131,6 +167,45 @@ class Game:
                 )
                 self.board[x, y] = cell
                 cell.draw()
+
+        self.board.set_selected(0, 0)
+
+    def click(self, event):
+        """On click event for the crossword puzzle."""
+        x = (event.x - CANVAS_MARGIN_INNER - 1) // (CELL_WIDTH + 1)
+        y = (event.y - CANVAS_MARGIN_INNER - 1) // (CELL_HEIGHT + 1)
+        self.board.set_selected(x, y)
+
+    def key(self, event):
+        """On key event for the crossword puzzle."""
+        if event.char in string.ascii_letters + " ":
+            x, y = self.board.selected
+            self.board[x, y].letter = event.char.capitalize()
+            self.board[x, y].draw()
+           
+        else:
+            x, y = self.board.selected
+            if event.keysym == "Up":
+                y = (y-1) % self.puzzle.height
+                while self.board[x, y].type == BLACK_CELL:
+                    y = (y-1) % self.puzzle.height
+                self.board.set_selected(x, y)
+            if event.keysym == "Down":
+                y = (y+1) % self.puzzle.height
+                while self.board[x, y].type == BLACK_CELL:
+                    y = (y+1) % self.puzzle.height
+                self.board.set_selected(x, y)
+            if event.keysym == "Left":
+                x = (x-1) % self.puzzle.height
+                while self.board[x, y].type == BLACK_CELL:
+                    x = (x-1) % self.puzzle.height
+                self.board.set_selected(x, y)
+            if event.keysym == "Right":
+                x = (x+1) % self.puzzle.height
+                while self.board[x, y].type == BLACK_CELL:
+                    x = (x+1) % self.puzzle.height
+                self.board.set_selected(x, y)
+                
 
                                     
 g = Game()
