@@ -13,7 +13,7 @@ import puz
 
 # Logging
 from logging import FATAL, CRITICAL, ERROR, WARNING, INFO, DEBUG, NOTSET
-FORMAT = "%(levelname)8s | %(asctime)s %(message)s"
+FORMAT = "%(levelname)8s %(asctime)s %(message)s"
 DATEFMT = "%I:%M:%S %p" # %m/%d/%y
 LEVEL = NOTSET
 logging.basicConfig(format=FORMAT, datefmt=DATEFMT, level=LEVEL)
@@ -61,10 +61,17 @@ SHOW_CLOCK = True
 
 logging.log(DEBUG, "crossword: constants initialized")
 
+
 # Function
 def index_to_position(index, array_width):
     """Determine the coordinates of an index in an array of specified width."""
     return (index % array_width, index // array_width)
+
+
+def position_to_index(x, y, array_width):
+    """Determine the coordinates of an index in an array of specified width."""
+    return x + y*array_width
+
 
 # Class
 class CrosswordCell:
@@ -117,6 +124,7 @@ class CrosswordCell:
             if self.selection_level == 0: cell_fill = FILL_LETTER_0
             elif self.selection_level == 1: cell_fill = FILL_LETTER_1
             elif self.selection_level == 2: cell_fill = FILL_LETTER_2
+            else: return
 
             cell_id = self.canvas.create_rectangle(
                 *cell_position, fill=cell_fill)
@@ -137,9 +145,11 @@ class CrosswordCell:
                 *cell_position, fill=cell_fill)
             self.canvas_ids.append(cell_id)
 
+
 class CrosswordWord:
     """Container class for a crossword word that contains multiple cells as well
     as its numbering information from the original puzzle."""
+
 
     def __init__(self, cells, info):
         """Initialize a new crossword word with its corresponding letter cells
@@ -162,6 +172,7 @@ class CrosswordWord:
         """Set the entire word as unselected."""
         for cell in self.cells:
             cell.set_unselected()
+
 
 class CrosswordBoard:
     """Container class for an entire crossword board. Essentially serves as a
@@ -230,6 +241,9 @@ class CrosswordBoard:
         origin = self[x, y]
         if direction == ACROSS: words = self.across_words
         elif direction == DOWN: words = self.down_words
+        else:
+            logging.log(ERROR, "%s: invalid direction in set_selected")
+            return
         for word in words:
             if origin in word.cells:
                 word.set_selected()
@@ -243,12 +257,15 @@ class CrosswordBoard:
         origin = self[x, y]
         if direction == ACROSS: words = self.across_words
         elif direction == DOWN: words = self.down_words
+        else:
+            logging.log(ERROR, "%s: invalid direction in set_unselected")
+            return
         for word in words:
             if origin in word.cells:
                 word.set_unselected()
 
 class CrosswordPlayer:
-    """A singleplayer crossword player that uses puz file crossword puzzles."""
+    """A single player crossword player that uses puz file crossword puzzles."""
 
     def __init__(self):
         """Initialize a new crossword player."""
@@ -433,6 +450,56 @@ class CrosswordPlayer:
         self.game_clock.config(text=clock_time)
         self.window.after(100, self.update_clock)
 
+    def move_current_selection(self, direction, distance):
+        """Move the current selection by the distance in the specified
+        direction. Skips to next word and wraps around the entire board."""
+        x, y = self.board.index(self.board.current_cell)
+        s = -1 if distance < 0 else 1
+        if direction == ACROSS:
+            for i in range(0, distance, s):
+                at_word_end = False
+                if x + s >= self.puzzle.width:
+                    at_word_end = True
+                else:
+                    if not self.board[x+s, y] in self.board.current_word.cells:
+                        at_word_end = True
+
+                if at_word_end:
+                    cell_info_index = self.numbering.across.index(
+                        self.board.current_word.info)
+                    next_cell_info = self.numbering.across[
+                        (cell_info_index + s) % len(self.numbering.across)]
+                    next_cell_number = next_cell_info["cell"]
+                    x, y = index_to_position(
+                        next_cell_number, self.puzzle.width)
+
+                    if s < 0:
+                        x += s
+                else:
+                    x += s
+            self.board.set_selected(x, y, self.direction)
+        if direction == DOWN:
+            for i in range(distance):
+                at_word_end = False
+                if y + s >= self.puzzle.height:
+                    at_word_end = True
+                else:
+                    if not self.board[x, y+s] in self.board.current_word.cells:
+                        at_word_end = True
+
+                if at_word_end:
+                    cell_info_index = self.numbering.down.index(
+                        self.board.current_word.info)
+                    next_cell_info = self.numbering.down[
+                        (cell_info_index + s) % len(self.numbering.down)]
+                    next_cell_number = next_cell_info["cell"]
+                    x, y = index_to_position(
+                        next_cell_number, self.puzzle.width)
+                    
+                else:
+                    y += s
+            self.board.set_selected(x, y, self.direction)
+        
     def on_board_button1(self, event):
         """On button-1 event for the canvas."""
         x = (event.x - CANVAS_OFFSET - 1) // CELL_SIZE
@@ -479,64 +546,33 @@ class CrosswordPlayer:
             self.board.current_cell.letter = letter.capitalize()
             self.board.current_cell.draw_to_canvas()
 
-            x, y = self.board.index(self.board.current_cell)
-            if self.direction == ACROSS:
-                get_next_cell = False
-                if x + 1 >= self.puzzle.width:
-                    get_next_cell = True
-                else:
-                    if not self.board[x+1, y] in self.board.current_word.cells:
-                        get_next_cell = True
+            x, y = self.board.index(self.board.current_cell) 
+    
+            at_word_end = False
+            if x + 1 >= self.puzzle.width:
+                at_word_end = True
+            else:
+                if not self.board[x+1, y] in self.board.current_word.cells:
+                    at_word_end = True
 
-                if get_next_cell:
-                    if ON_LAST_LETTER_GO_TO == "first cell":
-                        self.board.current_word.set_unselected()
-                        x -= self.board.current_word.info["len"] - 1
-                        self.board.set_selected(x, y, self.direction)
-                    elif ON_LAST_LETTER_GO_TO == "same cell":
-                        pass
-                    else: # Defaults to next word
-                        self.board.current_word.set_unselected()
-                        cell_info_index = self.numbering.across.index(
-                            self.board.current_word.info)
-                        next_cell_info = self.numbering.across[
-                            (cell_info_index + 1) % len(self.numbering.across)]
-                        next_cell_number = next_cell_info["cell"]
-                        x, y = index_to_position(
-                            next_cell_number, self.puzzle.width)
-                        self.board.set_selected(x, y, self.direction)
+            if at_word_end:
+                if ON_LAST_LETTER_GO_TO == "first cell":
+                    distance = self.board.current_word.info["len"] - 1
+                    self.move_current_selection(self.direction, -distance)
+                elif ON_LAST_LETTER_GO_TO == "same cell":
+                    pass                    
                 else:
-                    self.board.set_selected(x+1, y, self.direction)
-
-            if self.direction == DOWN:
-                get_next_cell = False
-                if y + 1 >= self.puzzle.height:
-                    get_next_cell = True
-                else:
-                    if not self.board[x, y+1] in self.board.current_word.cells:
-                        get_next_cell = True
-
-                if get_next_cell:
-                    if ON_LAST_LETTER_GO_TO == "first cell":
-                        self.board.current_word.set_unselected()
-                        y -= self.board.current_word.info["len"] - 1
-                        self.board.set_selected(x, y, self.direction)
-                    elif ON_LAST_LETTER_GO_TO == "same cell":
-                        pass
-                    else: # Defaults to next word
-                        self.board.current_word.set_unselected()
-                        cell_info_index = self.numbering.down.index(
-                            self.board.current_word.info)
-                        next_cell_info = self.numbering.down[
-                            (cell_info_index + 1) % len(self.numbering.down)]
-                        next_cell_number = next_cell_info["cell"]
-                        x, y = index_to_position(
-                            next_cell_number, self.puzzle.height)
-                        self.board.set_selected(x, y, self.direction)
-                else:
-                    self.board.set_selected(x, y+1, self.direction)
+                    self.move_current_selection(self.direction, 1)
+            else:
+                self.move_current_selection(self.direction, 1)
 
             self.update_selected_clue()
+
+        elif event.keysym == "BackSpace":
+            self.board.current_cell.letter = ""
+            self.board.current_cell.draw_to_canvas()
+
+            self.move_current_selection(self.direction, -1)
                 
     def run_application(self):
         """Run the application."""
