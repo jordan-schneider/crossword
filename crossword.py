@@ -63,7 +63,7 @@ def get_any_value(string):
 
 parser = configparser.ConfigParser()
 parser.read("config.txt")
-config.__dict__.update({item: get_any_value(parser[section][item]) for section in parser for item in parser[section]})
+config.__dict__.update({item.upper(): get_any_value(parser[section][item]) for section in parser for item in parser[section]})
 logging.log(DEBUG, "configurations loaded")
 
 # Utility
@@ -279,7 +279,7 @@ class CrosswordPlayer:
         self.across_list.config(
             width=35, font=config.FONT_LIST, bd=0, selectborderwidth=0, selectbackground=config.FILL_SELECTED_WORD)
         self.across_list.grid(row=1, column=0, sticky="ns")
-        self.across_list.bind("<Button-1>", self.on_across_list_button1)
+        self.across_list.bind("<Button-1>", self.on_across_list_action)
 
         self.down = tkinter.Frame(self.clues)
         self.down.grid(row=1, column=0, padx=5, pady=5, sticky="ns")
@@ -293,8 +293,7 @@ class CrosswordPlayer:
         self.down_list.config(
             width=35, font=config.FONT_LIST, bd=0, selectborderwidth=0, selectbackground=config.FILL_SELECTED_WORD)
         self.down_list.grid(row=1, column=0, sticky="ns")
-        self.down_list.bind("<Button-1>", self.on_down_list_button1)
-
+        self.down_list.bind("<Button-1>", self.on_down_list_action)
         logging.log(DEBUG, "built crossword graphical interface")
 
         self.game_board.create_rectangle(
@@ -417,18 +416,18 @@ class CrosswordPlayer:
         window_y = self.game_board.winfo_rooty() + event.y
         self.game_menu.post(window_x, window_y)
 
-    def on_across_list_button1(self, event):
-        """On button-1 event for the across clue list."""
-        self.board.current_word.set_unselected()
+    def on_across_list_action(self, event):
+        """On button-1 and key event for the across clue list."""
+        self.board.current_word.set_fill(config.FILL_UNSELECTED)
         self.direction = "across"
         clue_number = self.across_list.nearest(event.y)
         cell_number = self.numbering.across[clue_number]["cell"]
         x, y = index_to_position(cell_number, self.puzzle.width)
         self.board.set_selected(x, y, self.direction)
 
-    def on_down_list_button1(self, event):
-        """On button-1 event for the down clue list."""
-        self.board.current_word.set_unselected()
+    def on_down_list_action(self, event):
+        """On button-1 and key event for the down clue list."""
+        self.board.current_word.set_fill(config.FILL_UNSELECTED)
         self.direction = "down"
         clue_number = self.across_list.nearest(event.y)
         cell_number = self.numbering.down[clue_number]["cell"]
