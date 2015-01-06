@@ -12,4 +12,4 @@ FILL_EMPTY: black
 ON_DOUBLE_ARROW_KEY: stay in cell
 ON_SPACE_KEY: clear and skip
 ON_ENTER_KEY: next word
-ON_LAST_LETTER_GO_TO: first cell
+ON_LAST_LETTER_GO_TO: next word

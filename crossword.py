@@ -57,7 +57,8 @@ logging.log(DEBUG, "constant namespace loaded")
 
 # Configurable
 def get_any_value(string):
-    """Get any possible values out of a string."""
+    """Get any possible values out of a string.
+    This is a cheap method and is probably unstable. Just a workaround for the config parser."""
     try: return eval(string, {}, {})
     except: return string
 
@@ -77,7 +78,8 @@ def position_to_index(x, y, array_width):
 
 # Class
 class CrosswordCell:
-    """Container class for a single crossword cell."""
+    """Container class for a single crossword cell.
+    This also handles setting the fill for highlighting."""
 
     def __init__(self, canvas, type, fill, x, y, letter="", number=""):
         """Initialize a new crossword cell."""
@@ -116,7 +118,8 @@ class CrosswordCell:
             self.canvas_ids = [cell_id]
 
 class CrosswordWord:
-    """Container class for a crossword word that holds cell and puzzle info references."""
+    """Container class for a crossword word that holds cell and puzzle info references.
+    Just for ease of access."""
 
     def __init__(self, cells, info):
         """Initialize a new crossword word with its corresponding letter cells puzzle info."""
