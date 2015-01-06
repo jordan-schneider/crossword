@@ -25,6 +25,8 @@ class Config:
     FILL_SELECTED_WORD = "light blue"
     FILL_SELECTED_LETTER = "yellow"
     FILL_EMPTY = "black"
+    FILL_CORRECT = "green"
+    FILL_INCORRECT = "red"
     ON_DOUBLE_ARROW_KEY = "stay in cell"  # ["stay in cell", "move in direction"]
     ON_SPACE_KEY = "clear and skip"  # ["clear and skip", "change direction"]
     ON_ENTER_KEY = "next word"  # ["next word"]
@@ -119,12 +121,14 @@ class CrosswordCell:
 
 class CrosswordWord:
     """Container class for a crossword word that holds cell and puzzle info references.
-    Just for ease of access."""
+    Just for ease of access. Some of it is a bit sloppy as well and the general algorithm should be reconsidered
+    eventually."""
 
-    def __init__(self, cells, info):
+    def __init__(self, cells, info, solution):
         """Initialize a new crossword word with its corresponding letter cells puzzle info."""
         self.cells = cells
         self.info = info
+        self.solution = solution
 
     def set_fill(self, fill):
         """Set the fill of the cells in the crossword word."""
@@ -170,13 +174,15 @@ class CrosswordBoard:
             x, y = index_to_position(info["cell"], self.puzzle.width)
             length = info["len"]
             cells = [(self[x+i, y]) for i in range(length)]
-            self.across_words.append(CrosswordWord(cells, info))
+            solution = "".join([self.puzzle.solution[info["cell"] + i] for i in range(length)])
+            self.across_words.append(CrosswordWord(cells, info, solution))
         for info in self.numbering.down:
             cells = []
             x, y = index_to_position(info["cell"], self.puzzle.width)
             length = info["len"]
             cells = [self[x, y+i] for i in range(length)]
-            self.down_words.append(CrosswordWord(cells, info))
+            solution = "".join([self.puzzle.solution[info["cell"] + i] for i in range(length)])
+            self.down_words.append(CrosswordWord(cells, info, solution))
         logging.log(DEBUG, "crossword words generated")
 
     def set_selected(self, x, y, direction):
@@ -415,6 +421,8 @@ class CrosswordPlayer:
 
     def on_board_button2(self, event):
         """On button-2 event for the canvas."""
+        self.on_board_button1(event)
+        self.window.update()
         window_x = self.game_board.winfo_rootx() + event.x
         window_y = self.game_board.winfo_rooty() + event.y
         self.game_menu.post(window_x, window_y)
@@ -465,7 +473,10 @@ class CrosswordPlayer:
         self.window.destroy()
         logging.log(INFO, "destroying application")
 
-cp = CrosswordPlayer()
-cp.load_puzzle("puzzles/Nov0705.puz")
-cp.build_application()
-cp.run_application()
+def test():
+    cp = CrosswordPlayer()
+    cp.load_puzzle("puzzles/Nov0705.puz")
+    cp.build_application()
+    cp.run_application()
+
+test()
