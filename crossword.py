@@ -1,23 +1,47 @@
 # Crossword
 # Noah Kim
 
+
 # Import
 import logging
 import tkinter
-import configparser
 import time
 import datetime
+import platform
 import string
 import puz
+
 
 # Logging
 from logging import FATAL, CRITICAL, ERROR, WARNING, INFO, DEBUG, NOTSET
 logging.basicConfig(format="%(levelname)8s %(asctime)s %(message)s", datefmt="%I:%M:%S %p", level=NOTSET)
-logging.log(INFO, "started")
+logging.log(INFO, "logging started")
+
 
 # Constant
+LETTER = "-"
+EMPTY = "."
+DOWN = "down"
+ACROSS = "across"
+
+WINDOWS_FONT_MODIFIER = -5
+MAC_FONT_MODIFIER = 0
+SELECTED_FONT_MODIFIER = MAC_FONT_MODIFIER if platform.system() == "Darwin" else WINDOWS_FONT_MODIFIER
+
+
+# Configuration
+def get_any_value(string):
+    """Get any possible values out of a string. This is a cheap method and is probably unstable. Just a workaround for
+    the namespace configuration file reader."""
+    try: return eval(string, {}, {})
+    except: return string
+
 class Config:
-    CELL_SIZE = 40
+    """The configuration namespace. This is a container for all of the configurable and non-configurable options for the
+    crossword app. It also has a method that reads from and dump to a configuration file, but this is only used for
+    initial configuration and changes made by the user in the settings menu."""
+
+    CELL_SIZE = 33
     FONT_FAMILY = "tkDefaultFont"
     FONT_SIZE_MODIFIER = 0
     FONT_COLOR = "black"
@@ -39,37 +63,59 @@ class Config:
     WINDOW_CLOCK = True
     WINDOW_CLOCK_COLOR = "grey70"
     CANVAS_OFFSET = 3
-    CANVAS_SPARE = 2 + 1 # 2 for outline and 1 for spare right hand pixels
-    CANVAS_PAD_LETTER = CELL_SIZE // 2
+    CANVAS_SPARE = 2 + 1  # 2 for outline and 1 for spare right hand pixels
+
+    @property
+    def CANVAS_PAD_LETTER(self):
+        return self.CELL_SIZE // 2 + 1
+
     CANVAS_PAD_NUMBER_LEFT = 3
     CANVAS_PAD_NUMBER_TOP = 6
-    FONT_TITLE = (FONT_FAMILY, 30 + FONT_SIZE_MODIFIER)
-    FONT_HEADER = (FONT_FAMILY, 25 + FONT_SIZE_MODIFIER)
-    FONT_LABEL = (FONT_FAMILY, 20 + FONT_SIZE_MODIFIER)
-    FONT_LIST = (FONT_FAMILY, 15 + FONT_SIZE_MODIFIER)
-    FONT_LETTER = (FONT_FAMILY, int(CELL_SIZE / 1.8))
-    FONT_NUMBER = (FONT_FAMILY, int(CELL_SIZE / 3.5))
+
+    @property
+    def FONT_TITLE(self):
+        return self.FONT_FAMILY, 25 + self.FONT_SIZE_MODIFIER
+
+    @property
+    def FONT_HEADER(self):
+        return self.FONT_FAMILY, 20 + self.FONT_SIZE_MODIFIER
+
+    @property
+    def FONT_LABEL(self):
+        return self.FONT_FAMILY, 15 + self.FONT_SIZE_MODIFIER
+
+    @property
+    def FONT_LIST(self):
+        return self.FONT_FAMILY, 10 + self.FONT_SIZE_MODIFIER
+
+    FILE_CONFIG = "config.txt" # Very meta (._.)
+    
+    def __init__(self):
+        """Magic method for initialization."""
+        self.read_file_options = []
+
+    def read_file(self, file_path):
+        """Reads the configurations from the file at file_path and updates the namespace's nickname with them. Also
+        records what items were read from the file so that the same ones can be dumped in dump_file."""
+        self.read_file_options = []
+        with open(file_path) as file:
+            for line in file.read().split("\n"):
+                option, value = map(lambda item: item.strip(), line.split(":"))
+                setattr(self, option, get_any_value(value))
+                self.read_file_options.append(option)
+
+    def dump_file(self, file_path, dump_all=False):
+        """Dumps the configurations from the namespace to file_path. This method ONLY dumps the methods read in
+        read_file unless dump_all is set to True."""
+        with open(file_path, "w") as file:
+            file.write("\n".join(["%s: %s" % (option, getattr(self, option)) for option in self.read_file_options]))
 
 config = Config()
-LETTER = "-"
-EMPTY = "."
-DOWN = "down"
-ACROSS = "across"
-logging.log(DEBUG, "constant namespace loaded")
+config.read_file(config.FILE_CONFIG)
+logging.log(DEBUG, "config namespace loaded")
 
-# Configurable
-def get_any_value(string):
-    """Get any possible values out of a string.
-    This is a cheap method and is probably unstable. Just a workaround for the config parser."""
-    try: return eval(string, {}, {})
-    except: return string
 
-parser = configparser.ConfigParser()
-parser.read("config.txt")
-config.__dict__.update({item.upper(): get_any_value(parser[section][item]) for section in parser for item in parser[section]})
-logging.log(DEBUG, "configurations loaded")
-
-# Utility
+# Crossword Models
 def index_to_position(index, array_width):
     """Determine the coordinates of an index in an array of specified width."""
     return index % array_width, index // array_width
@@ -78,51 +124,55 @@ def position_to_index(x, y, array_width):
     """Determine the coordinates of an index in an array of specified width."""
     return x + y*array_width
 
-# Class
 class CrosswordCell:
-    """Container class for a single crossword cell.
-    This also handles setting the fill for highlighting."""
+    """Container class for a single crossword cell. This handles setting the fill, coloring the letter, and drawing
+    rebus mode. It draws itself to the canvas given its top left coordinates. Cell number is drawn in the top left."""
 
-    def __init__(self, canvas, type, fill, x, y, letter="", number=""):
-        """Initialize a new crossword cell."""
-        self.canvas = canvas
-        self.type = type
-        self.fill = fill
-        self.x = x
-        self.y = y
-        self.letter = letter
-        self.number = number
+    def __init__(self, canvas, type, color, fill, x, y, letters="", number=""):
+        """Magic method to initialize a new crossword cell."""
+        self.canvas = canvas # Tkinter Canvas from the main application
+        self.type = type # Letter or number
+        self.color = color # Letter color
+        self.fill = fill # Cell background fill
+        self.x = x # Top left x
+        self.y = y # Top left y
+        self.letters = letters # Letter or letters in the cell (rebus mode)
+        self.number = number # Cell number
 
-        self.selection_level = 0
-        self.canvas_ids = []
+        self.rebus = len(self.letters)
+        self.canvas_ids = [] # For efficiently tracking the drawings on the canvas
 
-    def set_fill(self, fill):
-        """Set the fill of the crossword cell."""
-        self.fill = fill
-        self.draw_to_canvas()
+        if self.type == EMPTY:
+            self.fill = config.FILL_EMPTY
 
     def draw_to_canvas(self):
-        """Draw the cell, its fill, letter, and number to the canvas at the cell's position."""
-        self.canvas.delete(*self.canvas_ids)
+        """Draw the cell, its fill, letter and color, and number to the canvas at the cell's position."""
+        self.canvas.delete(*self.canvas_ids) # Clear all parts of the cell drawn on the canvas
         cell_position = (self.x, self.y, self.x+config.CELL_SIZE, self.y+config.CELL_SIZE)
+        cell_id = self.canvas.create_rectangle(*cell_position, fill=self.fill)
+
         if self.type == LETTER:
-            text_position = (self.x+config.CANVAS_PAD_LETTER, self.y+config.CANVAS_PAD_LETTER)
-            cell_id = self.canvas.create_rectangle(*cell_position, fill=self.fill)
-            letter_id = self.canvas.create_text(*text_position, text=self.letter, font=config.FONT_LETTER)
-            self.canvas_ids = [cell_id, letter_id]
+            text_position = (self.x+config.CANVAS_PAD_LETTER, self.y+config.CANVAS_PAD_LETTER) # Find the center
+            custom_font = (config.FONT_FAMILY, int(config.CELL_SIZE / (1.2 + 0.6*len(self.letters))))
+            # Devised the 1.2 + 0.6*len(...) based on observation
+            letter_id = self.canvas.create_text(*text_position, text=self.letters, font=custom_font, fill=self.color)
+            self.canvas_ids.append(letter_id)
+
             if self.number:
                 number_position = (self.x+config.CANVAS_PAD_NUMBER_LEFT, self.y+config.CANVAS_PAD_NUMBER_TOP)
-                number_id = self.canvas.create_text(*number_position, text=self.number, font=config.FONT_NUMBER,
-                                                    anchor="w")
+                custom_font = (config.FONT_FAMILY, int(config.CELL_SIZE / 3.5)) # Another arbitrary measurement
+                number_id = self.canvas.create_text(*number_position, text=self.number, font=custom_font, anchor="w")
                 self.canvas_ids.append(number_id)
-        else:
-            cell_id = self.canvas.create_rectangle(*cell_position, fill=config.FILL_EMPTY)
-            self.canvas_ids = [cell_id]
+
+    def update_options(self, **options):
+        """Update cell attributes and redraw it to the canvas."""
+        self.__dict__.update(options)
+        self.rebus = len(self.letters)
+        self.draw_to_canvas()
 
 class CrosswordWord:
-    """Container class for a crossword word that holds cell and puzzle info references.
-    Just for ease of access. Some of it is a bit sloppy as well and the general algorithm should be reconsidered
-    eventually."""
+    """Container class for a crossword word that holds cell and puzzle info references. This is a convenience class.
+    Some of it is a bit sloppy as well and the general algorithm should be reconsidered eventually."""
 
     def __init__(self, cells, info, solution):
         """Initialize a new crossword word with its corresponding letter cells puzzle info."""
@@ -130,13 +180,13 @@ class CrosswordWord:
         self.info = info
         self.solution = solution
 
-    def set_fill(self, fill):
-        """Set the fill of the cells in the crossword word."""
-        for cell in self.cells: cell.set_fill(fill)
+    def update_options(self, **options):
+        """Update the options of every cell in the word. This is simply a parent convenience method."""
+        for cell in self.cells: cell.update_options(**options)
 
 class CrosswordBoard:
-    """Container class for an entire crossword board. Essentially serves as a
-    second layer on top of the puzzle class."""
+    """Container class for an entire crossword board. Essentially serves as a second layer on top of the puzzle class.
+    This is what the server keeps track of, and every time a client makes a change they send the fill of their board."""
 
     def __init__(self, puzzle, numbering):
         """Create a crossword given a puzzle object."""
@@ -144,32 +194,30 @@ class CrosswordBoard:
         self.numbering = numbering
 
         self.cells = []
+        self.across_words = []
+        self.down_words = []
+        self.current_cell = None
+        self.current_word = None
+
         for y in range(self.puzzle.height):
             self.cells.append([])
             for x in range(self.puzzle.width):
                 self.cells[y].append(None)
-        self.across_words = []
-        self.down_words = []
-
-        self.current_cell = None
-        self.current_word = None
-        logging.log(DEBUG, "crossword board initialized")
 
     def __setitem__(self, position, value):
-        """Implements coordinate based index setting."""
+        """Magic method for coordinate based index setting."""
         self.cells[position[1]][position[0]] = value
 
     def __getitem__(self, position):
-        """Implements coordinate based index getting."""
+        """Magic method for coordinate based index getting."""
         return self.cells[position[1]][position[0]]
 
     def index(self, cell):
         """Get the coordinates of a cell if it exists in the crossword board."""
-        index = sum(self.cells, []).index(cell)
-        return index_to_position(index, self.puzzle.width)
+        return index_to_position(sum(self.cells, []).index(cell), self.puzzle.width)
 
     def generate_words(self):
-        """Generates all of the words for the crossword board."""
+        """Generates all of the words for the crossword board and puts them in two lists."""
         for info in self.numbering.across:
             x, y = index_to_position(info["cell"], self.puzzle.width)
             length = info["len"]
@@ -190,10 +238,12 @@ class CrosswordBoard:
         origin = self[x, y]
         if direction == ACROSS: words = self.across_words
         elif direction == DOWN: words = self.down_words
+        if self.current_word:
+            self.current_word.update_options(fill=config.FILL_UNSELECTED)
         for word in words:
             if origin in word.cells:
-                word.set_fill(config.FILL_SELECTED_WORD)
-                origin.set_fill(config.FILL_SELECTED_LETTER)
+                word.update_options(fill=config.FILL_SELECTED_WORD)
+                origin.update_options(fill=config.FILL_SELECTED_LETTER)
                 self.current_cell = origin
                 self.current_word = word
 
@@ -204,13 +254,15 @@ class CrosswordBoard:
         elif direction == DOWN: words = self.down_words
         for word in words:
             if origin in word.cells:
-                word.set_fill(config.FILL_UNSELECTED)
+                word.update_options(fill=config.FILL_UNSELECTED)
 
+
+# Application Classes
 class CrosswordPlayer:
-    """A single player crossword player that uses puz file crossword puzzles."""
+    """The bare client crossword player. Handles nothing except for the crossword board."""
 
     def __init__(self):
-        """Initialize a new crossword player."""
+        """Magic method to initialize a new crossword player."""
         self.direction = "across"
 
     def load_puzzle(self, puzzle):
@@ -264,7 +316,7 @@ class CrosswordPlayer:
             height=config.CELL_SIZE*self.puzzle.height + config.CANVAS_SPARE)
         self.game_board.grid(row=1, column=0, padx=5-config.CANVAS_OFFSET, pady=5-config.CANVAS_OFFSET, sticky="nwe")
         self.game_board.bind("<Button-1>", self.on_board_button1)
-        self.game_board.bind("<Button-2>", self.on_board_button2)
+        self.game_board.bind("<Button-2>" if platform.system() == "Darwin" else "<Button-3>", self.on_board_button2)
 
         self.game_menu = tkinter.Menu(self.game_board)
         self.game_menu.add_command(label="Check selected letter")
@@ -315,9 +367,9 @@ class CrosswordPlayer:
         for y in range(self.puzzle.height):
             for x in range(self.puzzle.width):
                 cell = CrosswordCell(
-                    self.game_board, self.puzzle.fill[y*self.puzzle.height + x], config.FILL_UNSELECTED,
-                    config.CANVAS_OFFSET + x*config.CELL_SIZE, config.CANVAS_OFFSET + y*config.CELL_SIZE,
-                    number=numbers.get(y*self.puzzle.height + x, ""))
+                    self.game_board, self.puzzle.fill[y*self.puzzle.height + x], config.FONT_COLOR,
+                    config.FILL_UNSELECTED, config.CANVAS_OFFSET + x*config.CELL_SIZE,
+                    config.CANVAS_OFFSET + y*config.CELL_SIZE, number=numbers.get(y*self.puzzle.height + x, ""))
                 self.board[x, y] = cell
                 cell.draw_to_canvas()
         self.board.generate_words()
@@ -364,46 +416,48 @@ class CrosswordPlayer:
         self.game_clock.config(text=clock_time)
         self.window.after(100, self.update_clock)
 
-    def move_current_selection(self, direction, distance):
+    def move_current_selection(self, direction, distance, force_next_word=False):
         """Move the current selection by the distance in the specified direction."""
         x, y = self.board.index(self.board.current_cell)
         s = -1 if distance < 0 else 1
+        self.board.set_selected(x, y, direction)
+        self.direction = direction
         if direction == ACROSS:
             for i in range(0, distance, s):
                 if x + s >= self.puzzle.width: at_word_end = True
                 elif not self.board[x+s, y] in self.board.current_word.cells: at_word_end = True
                 else: at_word_end = False
                 if at_word_end:
-                    if config.ON_LAST_LETTER_GO_TO == "first cell":
+                    if config.ON_LAST_LETTER_GO_TO == "first cell" and not force_next_word:
                         x -= self.board.current_word.info["len"] - 1
-                    elif config.ON_LAST_LETTER_GO_TO == "same cell":
+                    elif config.ON_LAST_LETTER_GO_TO == "same cell" and not force_next_word:
                         return
                     else:
                         cell_info_index = self.numbering.across.index(self.board.current_word.info)
                         next_cell_info = self.numbering.across[(cell_info_index + s) % len(self.numbering.across)]
                         next_cell_number = next_cell_info["cell"]
                         x, y = index_to_position(next_cell_number, self.puzzle.width)
-                        self.board.current_word.set_fill(config.FILL_UNSELECTED)
+                        self.board.current_word.update_options(fill=config.FILL_UNSELECTED)
                         if s == -1: x += next_cell_info["len"] - 1
                 else:
                     x += s
             self.board.set_selected(x, y, self.direction)
         elif direction == DOWN:
-            for i in range(distance):
+            for i in range(0, distance, s):
                 if y + s >= self.puzzle.height: at_word_end = True
                 elif not self.board[x, y+s] in self.board.current_word.cells: at_word_end = True
                 else: at_word_end = False
                 if at_word_end:
-                    if config.ON_LAST_LETTER_GO_TO == "first cell":
+                    if config.ON_LAST_LETTER_GO_TO == "first cell" and not force_next_word:
                         y -= self.board.current_word.info["len"] - 1
-                    elif config.ON_LAST_LETTER_GO_TO == "same cell":
+                    elif config.ON_LAST_LETTER_GO_TO == "same cell" and not force_next_word:
                         return
                     else:
                         cell_info_index = self.numbering.down.index(self.board.current_word.info)
                         next_cell_info = self.numbering.down[(cell_info_index + s) % len(self.numbering.down)]
                         next_cell_number = next_cell_info["cell"]
                         x, y = index_to_position(next_cell_number, self.puzzle.width)
-                        self.board.current_word.set_fill(config.FILL_UNSELECTED)
+                        self.board.current_word.update_options(fill=config.FILL_UNSELECTED)
                         if s == -1: y += next_cell_info["len"] - 1
                 else:
                     y += s
@@ -414,7 +468,7 @@ class CrosswordPlayer:
         x = (event.x - config.CANVAS_OFFSET - 1) // config.CELL_SIZE
         y = (event.y - config.CANVAS_OFFSET - 1) // config.CELL_SIZE
         if not (0 <= x < self.puzzle.width and 0 <= y < self.puzzle.height): return
-        self.board.current_word.set_fill(config.FILL_UNSELECTED)
+        self.board.current_word.update_options(fill=config.FILL_UNSELECTED)
         if self.board[x, y] == self.board.current_cell: self.direction = ["down", "across"][self.direction == "down"]
         self.board.set_selected(x, y, self.direction)
         self.update_selected_clue()
@@ -429,7 +483,7 @@ class CrosswordPlayer:
 
     def on_across_list_action(self, event):
         """On button-1 and key event for the across clue list."""
-        self.board.current_word.set_fill(config.FILL_UNSELECTED)
+        self.board.current_word.update_options(fill=config.FILL_UNSELECTED)
         self.direction = "across"
         clue_number = self.across_list.nearest(event.y)
         cell_number = self.numbering.across[clue_number]["cell"]
@@ -438,7 +492,7 @@ class CrosswordPlayer:
 
     def on_down_list_action(self, event):
         """On button-1 and key event for the down clue list."""
-        self.board.current_word.set_fill(config.FILL_UNSELECTED)
+        self.board.current_word.update_options(fill=config.FILL_UNSELECTED)
         self.direction = "down"
         clue_number = self.across_list.nearest(event.y)
         cell_number = self.numbering.down[clue_number]["cell"]
@@ -448,16 +502,31 @@ class CrosswordPlayer:
     def on_key_event(self, event):
         """On key event for the entire crossword player since canvas widgets
         have no active state."""
-        if event.char in string.ascii_letters + " ":
+        if event.char in string.ascii_letters + " " and event.char is not "":
             letter = event.char if event.char != " " else ""
-            self.board.current_cell.letter = letter.capitalize()
-            self.board.current_cell.draw_to_canvas()
+            self.board.current_cell.update_options(letters=letter.capitalize())
             self.move_current_selection(self.direction, 1)
             self.update_selected_clue()
         elif event.keysym == "BackSpace":
-            self.board.current_cell.letter = ""
-            self.board.current_cell.draw_to_canvas()
+            self.board.current_cell.update_options(letters="")
             self.move_current_selection(self.direction, -1)
+        elif event.char == "+": # Rebus
+            current_letters = self.board.current_cell.letters
+            if len(current_letters) > 0:
+                self.board.current_cell.update_options(letters=current_letters+"_")
+        elif event.char == "-": # Rebus
+            current_letters = self.board.current_cell.letters
+            if len(current_letters) > 1:
+                self.board.current_cell.update_options(letters=current_letters[:-1])
+
+        elif event.keysym == "Left":
+            self.move_current_selection(ACROSS, -1, force_next_word=True)
+        elif event.keysym == "Right":
+            self.move_current_selection(ACROSS, 1, force_next_word=True)
+        elif event.keysym == "Up":
+            self.move_current_selection(DOWN, -1, force_next_word=True)
+        elif event.keysym == "Down":
+            self.move_current_selection(DOWN, 1, force_next_word=True)
 
     def run_application(self):
         """Run the application."""
