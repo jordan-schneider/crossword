@@ -506,19 +506,21 @@ class CrosswordPlayer:
             letter = event.char if event.char != " " else ""
             self.board.current_cell.update_options(letters=letter.capitalize())
             self.move_current_selection(self.direction, 1)
-            self.update_selected_clue()
         elif event.keysym == "BackSpace":
             self.board.current_cell.update_options(letters="")
             self.move_current_selection(self.direction, -1)
-        elif event.char == "+": # Rebus
+
+        # Rebus
+        elif event.char == "+":
             current_letters = self.board.current_cell.letters
             if len(current_letters) > 0:
                 self.board.current_cell.update_options(letters=current_letters+"_")
-        elif event.char == "-": # Rebus
+        elif event.char == "-":
             current_letters = self.board.current_cell.letters
             if len(current_letters) > 1:
                 self.board.current_cell.update_options(letters=current_letters[:-1])
 
+        # Arrow keys
         elif event.keysym == "Left":
             self.move_current_selection(ACROSS, -1, force_next_word=True)
         elif event.keysym == "Right":
@@ -527,6 +529,8 @@ class CrosswordPlayer:
             self.move_current_selection(DOWN, -1, force_next_word=True)
         elif event.keysym == "Down":
             self.move_current_selection(DOWN, 1, force_next_word=True)
+
+        self.update_selected_clue()
 
     def run_application(self):
         """Run the application."""
