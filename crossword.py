@@ -63,7 +63,7 @@ class Config:
     WINDOW_CLOCK = True
     WINDOW_CLOCK_COLOR = "grey70"
     CANVAS_OFFSET = 3
-    CANVAS_SPARE = 2 + 1  # 2 for outline and 1 for spare right hand pixels
+    CANVAS_SPARE = 2 + 2  # 2 for outline and 1 for spare right hand pixels
 
     @property
     def CANVAS_PAD_LETTER(self):
@@ -87,6 +87,10 @@ class Config:
     @property
     def FONT_LIST(self):
         return self.FONT_FAMILY, 10 + self.FONT_SIZE_MODIFIER
+
+    @property
+    def FONT_CHAT(self):
+        return self.FONT_FAMILY, 0
 
     FILE_CONFIG = "config.txt" # Very meta (._.)
     
@@ -263,7 +267,7 @@ class CrosswordPlayer:
 
     def __init__(self):
         """Magic method to initialize a new crossword player."""
-        self.direction = "across"
+        pass
 
     def load_puzzle(self, puzzle):
         """Load a puzzle to the window."""
@@ -275,6 +279,9 @@ class CrosswordPlayer:
 
     def build_application(self):
         """Build the graphical interface, draws the crossword board, and populates the clue lists."""
+        self.direction = "across"
+        self.in_chat = False
+
         self.window = tkinter.Tk()
         self.window.title(config.WINDOW_TITLE)
         self.window.resizable(False, False)
@@ -313,8 +320,9 @@ class CrosswordPlayer:
         self.game_board = tkinter.Canvas(self.game)
         self.game_board.config(
             width=config.CELL_SIZE*self.puzzle.width + config.CANVAS_SPARE,
-            height=config.CELL_SIZE*self.puzzle.height + config.CANVAS_SPARE)
-        self.game_board.grid(row=1, column=0, padx=5-config.CANVAS_OFFSET, pady=5-config.CANVAS_OFFSET, sticky="nwe")
+            height=config.CELL_SIZE*self.puzzle.height + config.CANVAS_SPARE,
+            highlightthickness=0)
+        self.game_board.grid(row=1, column=0, padx=5-config.CANVAS_OFFSET, pady=5, sticky="nwe")
         self.game_board.bind("<Button-1>", self.on_board_button1)
         self.game_board.bind("<Button-2>" if platform.system() == "Darwin" else "<Button-3>", self.on_board_button2)
 
@@ -355,6 +363,21 @@ class CrosswordPlayer:
             width=35, font=config.FONT_LIST, bd=0, selectborderwidth=0, selectbackground=config.FILL_SELECTED_WORD)
         self.down_list.grid(row=1, column=0, sticky="ns")
         self.down_list.bind("<Button-1>", self.on_down_list_action)
+
+        self.chat_frame = tkinter.Frame(self.frame)
+        self.chat_frame.grid(row=0, column=2, rowspan=9, sticky="NS")
+        self.chat_frame.rowconfigure(0, weight=1)
+
+        self.chat_text = tkinter.Text(self.chat_frame)
+        self.chat_text.config(width=40, relief="sunken", bd=1, font=config.FONT_CHAT, state="disabled")
+        self.chat_text.grid(row=0, column=0, padx=5, pady=5, sticky="NS")
+
+        self.chat_entry = tkinter.Entry(self.chat_frame)
+        self.chat_entry.config(width=40, relief="sunken", bd=1, highlightthickness=0, font=config.FONT_CHAT)
+        self.chat_entry.grid(row=1, column=0, padx=6, pady=5, sticky="EW")
+        self.chat_entry.bind("<FocusIn>", self.toggle_in_chat)
+        self.chat_entry.bind("<FocusOut>", self.toggle_in_chat)
+
         logging.log(DEBUG, "built crossword graphical interface")
 
         self.game_board.create_rectangle(
@@ -383,6 +406,10 @@ class CrosswordPlayer:
 
         self.board.set_selected(0, 0, self.direction)
 
+    def toggle_in_chat(self, event):
+        self.in_chat = not self.in_chat
+        print(self.in_chat)
+
     def get_selected_clue(self):
         """Get which clue in the clue lists is selected."""
         selection = self.across_list.curselection()
@@ -392,6 +419,8 @@ class CrosswordPlayer:
 
     def update_game_info(self, event=None):
         """Update the current game info."""
+        if self.get_selected_clue() is None:
+            self.update_selected_clue()
         clue = self.get_selected_clue().copy()
         clue["dir"] = clue["dir"][0].capitalize()
         self.game_info.config(text="%(num)i%(dir)s. %(clue)s" % clue)
@@ -472,6 +501,7 @@ class CrosswordPlayer:
         if self.board[x, y] == self.board.current_cell: self.direction = ["down", "across"][self.direction == "down"]
         self.board.set_selected(x, y, self.direction)
         self.update_selected_clue()
+        self.game_board.focus_set()
 
     def on_board_button2(self, event):
         """On button-2 event for the canvas."""
@@ -480,6 +510,7 @@ class CrosswordPlayer:
         window_x = self.game_board.winfo_rootx() + event.x
         window_y = self.game_board.winfo_rooty() + event.y
         self.game_menu.post(window_x, window_y)
+        self.game_board.focus_set()
 
     def on_across_list_action(self, event):
         """On button-1 and key event for the across clue list."""
@@ -499,16 +530,28 @@ class CrosswordPlayer:
         x, y = index_to_position(cell_number, self.puzzle.width)
         self.board.set_selected(x, y, self.direction)
 
+    def on_chat_return(self):
+        """On event for when the user presses enter in the chat entry."""
+        self.chat_text.config(state="normal")
+        self.chat_text.insert("end", "You: %s" % self.chat_entry.get() + "\n")
+        self.chat_text.see("end")
+        self.chat_text.config(state="disabled")
+        self.chat_entry.delete(0, "end")
+
     def on_key_event(self, event):
         """On key event for the entire crossword player since canvas widgets
         have no active state."""
-        if event.char in string.ascii_letters + " " and event.char is not "":
+        if event.char in string.ascii_letters + " " and event.char is not "" and not self.in_chat:
             letter = event.char if event.char != " " else ""
             self.board.current_cell.update_options(letters=letter.capitalize())
             self.move_current_selection(self.direction, 1)
-        elif event.keysym == "BackSpace":
+        elif event.keysym == "BackSpace" and not self.in_chat:
             self.board.current_cell.update_options(letters="")
             self.move_current_selection(self.direction, -1)
+
+        # Chat
+        if event.keysym == "Return" and self.in_chat:
+            self.on_chat_return()
 
         # Rebus
         elif event.char == "+":
@@ -545,6 +588,10 @@ class CrosswordPlayer:
         self.window.quit()
         self.window.destroy()
         logging.log(INFO, "destroying application")
+
+class CrosswordClient(CrosswordPlayer):
+    """A networking framework built on top of the existing crossword player."""
+    pass
 
 def test():
     cp = CrosswordPlayer()
