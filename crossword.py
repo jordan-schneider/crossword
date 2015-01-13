@@ -370,6 +370,7 @@ class CrosswordPlayer:
         self.chat_text = tkinter.Text(self.chat_frame)
         self.chat_text.config(width=30, relief="sunken", bd=1, font=config.FONT_CHAT, state="disabled")
         self.chat_text.grid(row=0, column=0, padx=5, pady=5, sticky="NS")
+        self.chat_text.tag_config("you", foreground="blue")
 
         self.chat_entry = tkinter.Entry(self.chat_frame)
         self.chat_entry.config(relief="sunken", bd=1, highlightthickness=0, font=config.FONT_CHAT)
@@ -534,8 +535,14 @@ class CrosswordPlayer:
     def on_chat_return(self):
         """On event for when the user presses enter in the chat entry."""
         self.chat_text.config(state="normal")
+
+        start = self.chat_text.index("end")+"-1l" # Not sure why 
+        end = start+"+3c"
+
         self.chat_text.insert("end", "You: %s" % self.chat_entry.get() + "\n")
+        self.chat_text.tag_add("you", start, end)
         self.chat_text.see("end")
+
         self.chat_text.config(state="disabled")
         self.chat_entry.delete(0, "end")
 
