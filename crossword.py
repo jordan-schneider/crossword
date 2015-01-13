@@ -267,7 +267,9 @@ class CrosswordPlayer:
 
     def __init__(self):
         """Magic method to initialize a new crossword player."""
-        pass
+        self.direction = "across"
+        self.in_chat = False
+        self.color = "blue"
 
     def load_puzzle(self, puzzle):
         """Load a puzzle to the window."""
@@ -279,9 +281,6 @@ class CrosswordPlayer:
 
     def build_application(self):
         """Build the graphical interface, draws the crossword board, and populates the clue lists."""
-        self.direction = "across"
-        self.in_chat = False
-
         self.window = tkinter.Tk()
         self.window.title(config.WINDOW_TITLE)
         self.window.resizable(False, False)
@@ -369,12 +368,12 @@ class CrosswordPlayer:
         self.chat_frame.rowconfigure(0, weight=1)
 
         self.chat_text = tkinter.Text(self.chat_frame)
-        self.chat_text.config(width=40, relief="sunken", bd=1, font=config.FONT_CHAT, state="disabled")
+        self.chat_text.config(width=30, relief="sunken", bd=1, font=config.FONT_CHAT, state="disabled")
         self.chat_text.grid(row=0, column=0, padx=5, pady=5, sticky="NS")
 
         self.chat_entry = tkinter.Entry(self.chat_frame)
-        self.chat_entry.config(width=40, relief="sunken", bd=1, highlightthickness=0, font=config.FONT_CHAT)
-        self.chat_entry.grid(row=1, column=0, padx=6, pady=5, sticky="EW")
+        self.chat_entry.config(relief="sunken", bd=1, highlightthickness=0, font=config.FONT_CHAT)
+        self.chat_entry.grid(row=1, column=0, padx=7, pady=5, sticky="EW")
         self.chat_entry.bind("<FocusIn>", self.toggle_in_chat)
         self.chat_entry.bind("<FocusOut>", self.toggle_in_chat)
 
@@ -408,7 +407,6 @@ class CrosswordPlayer:
 
     def toggle_in_chat(self, event):
         self.in_chat = not self.in_chat
-        print(self.in_chat)
 
     def get_selected_clue(self):
         """Get which clue in the clue lists is selected."""
@@ -494,6 +492,9 @@ class CrosswordPlayer:
 
     def on_board_button1(self, event):
         """On button-1 event for the canvas."""
+        if self.in_chat:
+            self.game_board.focus_set()
+            return
         x = (event.x - config.CANVAS_OFFSET - 1) // config.CELL_SIZE
         y = (event.y - config.CANVAS_OFFSET - 1) // config.CELL_SIZE
         if not (0 <= x < self.puzzle.width and 0 <= y < self.puzzle.height): return
@@ -543,7 +544,7 @@ class CrosswordPlayer:
         have no active state."""
         if event.char in string.ascii_letters + " " and event.char is not "" and not self.in_chat:
             letter = event.char if event.char != " " else ""
-            self.board.current_cell.update_options(letters=letter.capitalize())
+            self.board.current_cell.update_options(letters=letter.capitalize(), color=self.color)
             self.move_current_selection(self.direction, 1)
         elif event.keysym == "BackSpace" and not self.in_chat:
             self.board.current_cell.update_options(letters="")
@@ -581,6 +582,7 @@ class CrosswordPlayer:
         self.epoch = time.time()
         self.update_game_info()
         self.update_clock()
+        self.game_board.focus_set()
         self.window.mainloop()
 
     def destroy_application(self):
@@ -588,6 +590,10 @@ class CrosswordPlayer:
         self.window.quit()
         self.window.destroy()
         logging.log(INFO, "destroying application")
+
+class CrosswordServer():
+    """A barebones server for hosting a crossword game."""
+    pass
 
 class CrosswordClient(CrosswordPlayer):
     """A networking framework built on top of the existing crossword player."""
