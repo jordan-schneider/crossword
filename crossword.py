@@ -9,6 +9,10 @@ import time
 import datetime
 import platform
 import string
+import pickle
+import threading
+import queue
+import socket
 import puz
 
 
@@ -128,7 +132,7 @@ def position_to_index(x, y, array_width):
     """Determine the coordinates of an index in an array of specified width."""
     return x + y*array_width
 
-class CrosswordCell:
+class Cell:
     """Container class for a single crossword cell. This handles setting the fill, coloring the letter, and drawing
     rebus mode. It draws itself to the canvas given its top left coordinates. Cell number is drawn in the top left."""
 
@@ -174,7 +178,7 @@ class CrosswordCell:
         self.rebus = len(self.letters)
         self.draw_to_canvas()
 
-class CrosswordWord:
+class Word:
     """Container class for a crossword word that holds cell and puzzle info references. This is a convenience class.
     Some of it is a bit sloppy as well and the general algorithm should be reconsidered eventually."""
 
@@ -188,7 +192,7 @@ class CrosswordWord:
         """Update the options of every cell in the word. This is simply a parent convenience method."""
         for cell in self.cells: cell.update_options(**options)
 
-class CrosswordBoard:
+class Board:
     """Container class for an entire crossword board. Essentially serves as a second layer on top of the puzzle class.
     This is what the server keeps track of, and every time a client makes a change they send the fill of their board."""
 
@@ -227,14 +231,14 @@ class CrosswordBoard:
             length = info["len"]
             cells = [(self[x+i, y]) for i in range(length)]
             solution = "".join([self.puzzle.solution[info["cell"] + i] for i in range(length)])
-            self.across_words.append(CrosswordWord(cells, info, solution))
+            self.across_words.append(Word(cells, info, solution))
         for info in self.numbering.down:
             cells = []
             x, y = index_to_position(info["cell"], self.puzzle.width)
             length = info["len"]
             cells = [self[x, y+i] for i in range(length)]
             solution = "".join([self.puzzle.solution[info["cell"] + i] for i in range(length)])
-            self.down_words.append(CrosswordWord(cells, info, solution))
+            self.down_words.append(Word(cells, info, solution))
         logging.log(DEBUG, "crossword words generated")
 
     def set_selected(self, x, y, direction):
@@ -262,7 +266,7 @@ class CrosswordBoard:
 
 
 # Application Classes
-class CrosswordPlayer:
+class Player:
     """The bare client crossword player. Handles nothing except for the crossword board."""
 
     def __init__(self):
@@ -277,7 +281,7 @@ class CrosswordPlayer:
         self.numbering = self.puzzle.clue_numbering()
         for clue in self.numbering.across: clue.update({"dir": ACROSS})
         for clue in self.numbering.down: clue.update({"dir": DOWN})
-        self.board = CrosswordBoard(self.puzzle, self.numbering)
+        self.board = Board(self.puzzle, self.numbering)
 
     def build_application(self):
         """Build the graphical interface, draws the crossword board, and populates the clue lists."""
@@ -368,13 +372,13 @@ class CrosswordPlayer:
         self.chat_frame.rowconfigure(0, weight=1)
 
         self.chat_text = tkinter.Text(self.chat_frame)
-        self.chat_text.config(width=30, relief="sunken", bd=1, font=config.FONT_CHAT, state="disabled")
+        self.chat_text.config(width=30, relief="sunken", bd=2, font=config.FONT_CHAT, state="disabled")
         self.chat_text.grid(row=0, column=0, padx=5, pady=5, sticky="NS")
         self.chat_text.tag_config("you", foreground="blue")
 
         self.chat_entry = tkinter.Entry(self.chat_frame)
-        self.chat_entry.config(relief="sunken", bd=1, highlightthickness=0, font=config.FONT_CHAT)
-        self.chat_entry.grid(row=1, column=0, padx=7, pady=5, sticky="EW")
+        self.chat_entry.config(font=config.FONT_CHAT)
+        self.chat_entry.grid(row=1, column=0, padx=6, pady=5, sticky="EW")
         self.chat_entry.bind("<FocusIn>", self.toggle_in_chat)
         self.chat_entry.bind("<FocusOut>", self.toggle_in_chat)
 
@@ -389,7 +393,7 @@ class CrosswordPlayer:
         numbers.update({w["cell"]: w["num"] for w in self.numbering.down})
         for y in range(self.puzzle.height):
             for x in range(self.puzzle.width):
-                cell = CrosswordCell(
+                cell = Cell(
                     self.game_board, self.puzzle.fill[y*self.puzzle.height + x], config.FONT_COLOR,
                     config.FILL_UNSELECTED, config.CANVAS_OFFSET + x*config.CELL_SIZE,
                     config.CANVAS_OFFSET + y*config.CELL_SIZE, number=numbers.get(y*self.puzzle.height + x, ""))
@@ -598,16 +602,132 @@ class CrosswordPlayer:
         self.window.destroy()
         logging.log(INFO, "destroying application")
 
-class CrosswordServer():
-    """A barebones server for hosting a crossword game."""
-    pass
+class Handler():
+    """A class that handles incoming and outgoing messages between a client and the server."""
 
-class CrosswordClient(CrosswordPlayer):
+    def __init__(self, socket, address, server):
+        self.socket = socket
+        self.address = address
+        self.server = server
+
+        self.active = False
+        logging.log(INFO, "Handler@%s initialized" % self.address[0])
+
+    def send(self, message):
+        data = pickle.dumps(message)
+        self.socket.send(data)
+
+    def receive(self):
+        logging.log(INFO, "Handler@%s receiver started" % self.address[0])
+        while self.active:
+            try:
+                self.server.messages.put((self, pickle.loads(self.socket.recv(1024))))
+            except Exception:
+                logging.log(WARNING, "Connection<%s> receiver error" % self.address[0])
+                self.shutdown()
+
+    def activate(self):
+        self.active_receiver = threading.Thread(target=self.recv)
+        self.active_receiver.start()
+        logging.log(INFO, "Connection@%s activated" % self.address[0])
+
+    def shutdown(self):
+        self.active = False
+        self.active_receiver._stop()
+        self.socket.close()
+        logging.log(INFO, "Connection@%s socket closed" % self.address[0])
+        self.server.connections.remove(self)
+        logging.log(INFO, "Connection@%s shut down" % self.address[0])
+
+class Server():
+    """A barebones server for hosting a crossword game."""
+
+    def __init__(self, address):
+        self.address = address
+        self.messages = queue.Queue()
+        self.handlers = []
+        self.active = True
+        logging.log(INFO, "Server@%s initialized" % self.address[0])
+
+    def bind(self):
+        try:
+            self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            self.socket.bind(self.address)
+            self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+            self.socket.listen(5)
+            logging.log(INFO, "Server@%s bound" % self.address[0])
+        except OSError as error:
+            logging.log(FATAL, "Server@%s could not bind:\n  %s" % (self.address[0], error))
+
+    def search(self):
+        logging.log(INFO, "Server@%s connection search started" % self.address[0])
+        while self.active:
+            try:
+                socket, address = self.socket.accept()
+                handler = Handler(socket, address, self)
+                self.handlers.append(handler)
+                handler.activate()
+            except Exception as exception:
+                logging.log(WARNING, "Server@%s connection search error" % self.address[0])
+
+    def send(self, message, connection=None):
+        if connection:
+            connection.send(message)
+        else:
+            for connection in self.connections:
+                connection.send(message)
+
+    def serve(self):
+        while self.active:
+            try:
+                if not self.messages.empty():
+                    message = self.messages.get()
+                    self.handle(message)
+            except Exception as exception:
+                logging.log(ERROR, "Server@%s runtime error:\n  %s" % (self.address[0], exception))
+
+    def handle(self, message):
+        connection, message = message
+        if message["type"] == "command":
+            if message["message"] == "join":
+                new = self.message(message["name"] + " joined as " + connection.address[0])
+                self.send(new)
+                logging.log(INFO, "[%(time)s] %(message)s" % new)
+
+            elif message["message"] == "exit":
+                new = self.message(message["name"] + " exited")
+                self.send(new)
+                logging.log(INFO, "[%(time)s] %(message)s" % new)
+
+        elif message["type"] == "chat":
+            self.send(message)
+            logging.log(INFO, "[%(time)s] <%(name)s> %(message)s" % message)
+
+    def activate(self):
+        self.bind()
+        self.active_search = threading.Thread(target=self.search)
+        self.active_search.start()
+        logging.log(INFO, "Server<%s> activated" % self.address[0])
+        logging.log(INFO, "Server<%s> *** running on ip %s and port %s" %
+                    (self.address[0], self.address[0], self.address[1]))
+        try:
+            self.serve()
+        except KeyboardInterrupt:
+            self.shutdown()
+
+    def shutdown(self):
+        self.active = False
+        self.active_search._stop()
+        self.socket.close()
+        logging.log(INFO, "Server<%s> socket closed" % self.address[0])
+        logging.log(INFO, "Server<%s> shut down" % self.address[0])
+
+class Client(Player):
     """A networking framework built on top of the existing crossword player."""
     pass
 
 def test():
-    cp = CrosswordPlayer()
+    cp = Player()
     cp.load_puzzle("puzzles/Nov0705.puz")
     cp.build_application()
     cp.run_application()
