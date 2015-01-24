@@ -602,7 +602,34 @@ class Player:
         self.window.destroy()
         logging.log(INFO, "destroying application")
 
-class Handler():
+# Sockets
+import struct
+def send_msg(sock, msg):
+    # Prefix each message with a 4-byte length (network byte order)
+    msg = struct.pack('>I', len(msg)) + msg
+    sock.sendall(msg)
+
+def recv_msg(sock):
+    # Read message length and unpack it into an integer
+    raw_msglen = recvall(sock, 4)
+    if not raw_msglen:
+        return None
+    msglen = struct.unpack('>I', raw_msglen)[0]
+    # Read the message data
+    return recvall(sock, msglen)
+
+def recvall(sock, n):
+    # Helper function to recv n bytes or return None if EOF is hit
+    data = b''
+    while len(data) < n:
+        packet = sock.recv(n - len(data))
+        if not packet:
+            return None
+        data += packet
+    return data
+
+
+class Handler:
     """A class that handles incoming and outgoing messages between a client and the server."""
 
     def __init__(self, socket, address, server):
@@ -614,39 +641,61 @@ class Handler():
         logging.log(INFO, "Handler@%s initialized" % self.address[0])
 
     def send(self, message):
+        print(message)
         data = pickle.dumps(message)
-        self.socket.send(data)
+        send_msg(self.socket, data)
 
     def receive(self):
         logging.log(INFO, "Handler@%s receiver started" % self.address[0])
         while self.active:
             try:
-                self.server.messages.put((self, pickle.loads(self.socket.recv(1024))))
+                message = pickle.loads(recv_msg(self.socket))
+                print(message)
+                if message["type"] == "meta":
+                    self.color = message["color"]
+                    self.name = message["name"]
+                else:
+                    print(message)
+                    self.server.messages.put((self, message))
             except Exception:
-                logging.log(WARNING, "Connection<%s> receiver error" % self.address[0])
-                self.shutdown()
+                logging.log(WARNING, "Handler<%s> receiver error" % self.address[0])
+                self.stop()
+        logging.log(INFO, "Handler@%s receiver stopped" % self.address[0])
 
-    def activate(self):
-        self.active_receiver = threading.Thread(target=self.recv)
+    def start(self):
+        self.active_receiver = threading.Thread(target=self.receive)
         self.active_receiver.start()
-        logging.log(INFO, "Connection@%s activated" % self.address[0])
+        logging.log(INFO, "Handler@%s started" % self.address[0])
 
-    def shutdown(self):
+    def stop(self):
         self.active = False
         self.active_receiver._stop()
         self.socket.close()
-        logging.log(INFO, "Connection@%s socket closed" % self.address[0])
-        self.server.connections.remove(self)
-        logging.log(INFO, "Connection@%s shut down" % self.address[0])
+        logging.log(INFO, "Handler@%s socket closed" % self.address[0])
+        self.server.handlers.remove(self)
+        logging.log(INFO, "Handler@%s shut down" % self.address[0])
 
-class Server():
-    """A barebones server for hosting a crossword game."""
+class Server:
+    """A barebones server for hosting a crossword game.
+
+    type: meta  # transmitting client information
+    type: game  # transmitting game change
+    type: chat  # transmitting chat message
+
+    """
 
     def __init__(self, address):
         self.address = address
         self.messages = queue.Queue()
         self.handlers = []
         self.active = True
+
+        self.puzzle = puz.read("puzzles/Nov0705.puz")
+        self.numbering = self.puzzle.clue_numbering()
+        for clue in self.numbering.across: clue.update({"dir": ACROSS})
+        for clue in self.numbering.down: clue.update({"dir": DOWN})
+        self.board = Board(self.puzzle, self.numbering)
+
         logging.log(INFO, "Server@%s initialized" % self.address[0])
 
     def bind(self):
@@ -662,20 +711,24 @@ class Server():
     def search(self):
         logging.log(INFO, "Server@%s connection search started" % self.address[0])
         while self.active:
+            #try:
             try:
                 socket, address = self.socket.accept()
                 handler = Handler(socket, address, self)
                 self.handlers.append(handler)
-                handler.activate()
-            except Exception as exception:
-                logging.log(WARNING, "Server@%s connection search error" % self.address[0])
+                handler.start()
+                handler.send({"type": "meta", "message": "board", "data": self.puzzle})
+            except OSError as error:
+                print(error)
+            #except Exception as exception:
+            #   logging.log(WARNING, "Server@%s connection search error: %s", self.address[0], exception)
 
-    def send(self, message, connection=None):
-        if connection:
-            connection.send(message)
+    def send(self, message, handler=None):
+        if handler:
+            handler.send(message)
         else:
-            for connection in self.connections:
-                connection.send(message)
+            for handler in self.handlers:
+                handler.send(message)
 
     def serve(self):
         while self.active:
@@ -687,44 +740,178 @@ class Server():
                 logging.log(ERROR, "Server@%s runtime error:\n  %s" % (self.address[0], exception))
 
     def handle(self, message):
-        connection, message = message
-        if message["type"] == "command":
-            if message["message"] == "join":
-                new = self.message(message["name"] + " joined as " + connection.address[0])
-                self.send(new)
-                logging.log(INFO, "[%(time)s] %(message)s" % new)
+        handler, message = message
+        message["color"] = handler.color
+        message["name"] = handler.name
+        print(message)
+        self.send(message)
 
-            elif message["message"] == "exit":
-                new = self.message(message["name"] + " exited")
-                self.send(new)
-                logging.log(INFO, "[%(time)s] %(message)s" % new)
-
-        elif message["type"] == "chat":
-            self.send(message)
-            logging.log(INFO, "[%(time)s] <%(name)s> %(message)s" % message)
-
-    def activate(self):
+    def start(self):
         self.bind()
         self.active_search = threading.Thread(target=self.search)
         self.active_search.start()
-        logging.log(INFO, "Server<%s> activated" % self.address[0])
-        logging.log(INFO, "Server<%s> *** running on ip %s and port %s" %
-                    (self.address[0], self.address[0], self.address[1]))
+        logging.log(INFO, "Server@%s startd" % self.address[0])
+        logging.log(INFO, "Server@%s running on %s:%s" % (self.address[0], self.address[0], self.address[1]))
         try:
             self.serve()
         except KeyboardInterrupt:
-            self.shutdown()
+            self.stop()
 
-    def shutdown(self):
+    def stop(self):
         self.active = False
         self.active_search._stop()
         self.socket.close()
-        logging.log(INFO, "Server<%s> socket closed" % self.address[0])
-        logging.log(INFO, "Server<%s> shut down" % self.address[0])
+        logging.log(INFO, "Server@%s socket closed" % self.address[0])
+        logging.log(INFO, "Server@%s shut down" % self.address[0])
 
 class Client(Player):
     """A networking framework built on top of the existing crossword player."""
-    pass
+
+    def __init__(self, address, name, color):
+        """Initialize a new, named client connecting to a server address."""
+        Player.__init__(self)
+
+        self.address = address
+        self.name = name
+        self.messages = queue.Queue()
+        self.active = False
+        self.failed = False
+        try:
+            self.socket = socket.socket()
+            self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+            self.socket.connect(self.address)
+            logging.log(DEBUG, "%s: bound" % repr(self))
+        except OSError as e:
+            logging.log(FATAL, "%s: could not connect: %s", repr(self), e)
+            self.failed = True
+        logging.log(DEBUG, "%s: initialized" % repr(self))
+
+    def __repr__(self):
+        """Return repr(self)."""
+        return "Client@%s" % self.address[0]
+
+    def send(self, message):
+        """Send a message to the connected server."""
+        data = pickle.dumps(message)
+        print(message)
+        send_msg(self.socket, data)
+
+    def on_key_event(self, event):
+        """Overwrite to send to server."""
+        if event.char in string.ascii_letters + " " and event.char is not "" and not self.in_chat:
+            letter = event.char if event.char != " " else ""
+            position = self.board.index(self.board.current_cell)
+            self.send({"type": "game", "position": position, "letters": letter.capitalize()})
+            self.move_current_selection(self.direction, 1)
+        elif event.keysym == "BackSpace" and not self.in_chat:
+            position = self.board.index(self.board.current_cell)
+            self.send((position, ""))
+            self.move_current_selection(self.direction, -1)
+
+        # Chat
+        if event.keysym == "Return" and self.in_chat:
+            self.on_chat_return()
+
+        # Rebus
+        elif event.char == "+":
+            current_letters = self.board.current_cell.letters
+            if len(current_letters) > 0:
+                self.board.current_cell.update_options(letters=current_letters+"_")
+        elif event.char == "-":
+            current_letters = self.board.current_cell.letters
+            if len(current_letters) > 1:
+                self.board.current_cell.update_options(letters=current_letters[:-1])
+
+        # Arrow keys
+        elif event.keysym == "Left":
+            self.move_current_selection(ACROSS, -1, force_next_word=True)
+        elif event.keysym == "Right":
+            self.move_current_selection(ACROSS, 1, force_next_word=True)
+        elif event.keysym == "Up":
+            self.move_current_selection(DOWN, -1, force_next_word=True)
+        elif event.keysym == "Down":
+            self.move_current_selection(DOWN, 1, force_next_word=True)
+
+        self.update_selected_clue()
+
+    # Loop
+    def receive(self):
+        """Loop receive data from the connected client."""
+        logging.log(DEBUG, "%s: receive loop started" % repr(self))
+        while self.active:
+            try:
+                data = recv_msg(self.socket)
+                message = pickle.loads(data)
+
+                if message["message"] == "board":
+                    self.puzzle = message["data"]
+                    self.numbering = self.puzzle.clue_numbering()
+                    self.board = Board(self.puzzle, self.numbering)
+                    print(self.board)
+                    self.ready_application = True
+
+                self.messages.put(message)
+            except Exception as e:
+                logging.log(ERROR, "%s: %s: %s in receive", repr(self), type(e).__name__, e)
+                if self.active:
+                    self.stop()
+
+    def update(self):
+        """Update the graphical interface with any new messages."""
+        if not self.active:
+            self.destroy_application()
+        while not self.messages.empty():
+            message = self.messages.get()
+            if message["type"] == "meta":
+                if message["message"] == "stop":
+                    logging.log(FATAL, "%s: server shut down" % repr(self))
+                    self.stop()
+                    return
+            if message["type"] == "game":
+                print(message)
+                x = message["position"][0]
+                y = message["position"][1]
+                self.board[x, y].update_options(color=message["color"], letters=message["letters"])
+        self.window.after(100, self.update)
+
+    # Main
+    def start(self):
+        """Start the client."""
+        self.ready_application = False
+        if self.failed:
+            logging.log(ERROR, "%s: failed to start" % repr(self))
+            return
+        if self.active:
+            logging.log(ERROR, "%s: already startd" % repr(self))
+            return
+        self.active = True
+        self.send({"type": "meta", "name": self.name, "color": self.color})
+        self.receive_thread = threading.Thread(target=self.receive)
+        self.receive_thread.start()
+
+        while not self.ready_application:
+            pass
+
+        self.build_application()
+
+        self.window.after(100, self.update)
+
+        self.run_application()
+        logging.log(DEBUG, "%s: update loop started" % repr(self))
+        logging.log(DEBUG, "%s: startd" % repr(self))
+
+    def stop(self):
+        """Shut down the client."""
+        if not self.active:
+            logging.log(WARNING, "%s: already shut down" % repr(self))
+            return
+        self.active = False
+        try:
+            self.socket.stop(0)
+        except:
+            logging.log(FATAL, "%s: server shut down" % repr(self))
+        logging.log(DEBUG, "%s: shut down" % repr(self))
+
 
 def test():
     cp = Player()
@@ -732,4 +919,3 @@ def test():
     cp.build_application()
     cp.run_application()
 
-test()
