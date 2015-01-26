@@ -60,6 +60,7 @@ class Config:
     ON_DOUBLE_ARROW_KEY = "stay in cell"  # ["stay in cell", "move in direction"]
     ON_SPACE_KEY = "clear and skip"  # ["clear and skip", "change direction"]
     ON_ENTER_KEY = "next word"  # ["next word"]
+    ON_TAB_KEY = "next word"  # ["next word"]
     ON_LAST_LETTER_GO_TO = "next word"  # ["next word", "first cell", "same cell"]
 
     WINDOW_TITLE = "NYTimes Crossword Puzzle"
@@ -214,6 +215,10 @@ class Board:
             for x in range(self.puzzle.width):
                 self.cells[y].append(None)
 
+    def __repr__(self):
+        """Magic method for string representation."""
+        return "crossword board"
+
     def __setitem__(self, position, value):
         """Magic method for coordinate based index setting."""
         self.cells[position[1]][position[0]] = value
@@ -241,7 +246,7 @@ class Board:
             cells = [self[x, y+i] for i in range(length)]
             solution = "".join([self.puzzle.solution[info["cell"] + i] for i in range(length)])
             self.down_words.append(Word(cells, info, solution))
-        logging.log(DEBUG, "crossword words generated")
+        logging.log(DEBUG, "%s crossword words generated", repr(self))
 
     def set_selected(self, x, y, direction):
         """Set the word at the position of the origin letter (and of the direction) as selected."""
@@ -270,6 +275,19 @@ class Board:
 # Application Classes
 MODIFIERS = {1: "Shift", 16: "Alt"}
 LETTERS = list(string.ascii_lowercase)
+
+def dummy_key_event(keysym, modifier):
+    event = tkinter.Event()
+    event.keysym = keysym
+    event.modifier = modifier
+    return event
+
+def is_chat_string_allowed(string):
+    print(string)
+    for character in string:
+        if character not in list(string.printable):
+            return False
+    return True
 
 class Player:
     """The bare client crossword player. Handles nothing except for the crossword board."""
@@ -388,17 +406,18 @@ class Player:
         self.chat_frame.rowconfigure(0, weight=1)
 
         self.chat_text = tkinter.Text(self.chat_frame)
-        self.chat_text.config(width=30, relief="sunken", bd=2, font=config.FONT_CHAT, state="disabled")
+        self.chat_text.config(width=30, relief="sunken", bd=1, font=config.FONT_CHAT, state="disabled")
         self.chat_text.grid(row=0, column=0, padx=5, pady=5, sticky="NS")
         self.chat_text.tag_config("you", foreground="blue")
 
         self.chat_entry = tkinter.Entry(self.chat_frame)
-        self.chat_entry.config(font=config.FONT_CHAT)
+        self.chat_entry.config(font=config.FONT_CHAT, validatecommand=(is_chat_string_allowed, "%S"))
         self.chat_entry.grid(row=1, column=0, padx=6, pady=5, sticky="EW")
 
         logging.log(DEBUG, "%s created application widgets", repr(self))
 
         self.window.bind_all("<Key>", self.event_key)
+        self.window.bind_all("<Tab>", self.event_key, dummy_key_event("Tab", 0))
         self.game_board.bind("<Button-1>", self.event_game_board_button_1)
         button_2 = "<Button-2>" if platform.system() == "Darwin" else "<Button-3>"
         self.game_board.bind(button_2, self.event_game_board_button_2)
@@ -494,9 +513,9 @@ class Player:
         selection = self.down_list.curselection()
         if selection: return self.numbering.down[int(selection[0])]
 
-    def chat_entry_has_focus(self):
+    def has_focus(self, widget):
         """Check if the chat entry has focus."""
-        return str(self.window.focus_get()).endswith(str(id(self.chat_entry)))
+        return str(self.window.focus_get()).endswith(str(id(widget)))
 
     def event_update_selected_clue(self, event):
         """Update the selected clue."""
@@ -532,7 +551,7 @@ class Player:
         modifier = MODIFIERS.get(event.state)
         keysym = event.keysym
 
-        if not self.chat_entry_has_focus():
+        if not self.has_focus(self.chat_entry):
             if keysym.lower() in LETTERS and event.char is not "":
                 letters = keysym.upper()
                 if modifier == "Shift": letters = self.board.current_cell.letters + letters
@@ -551,27 +570,41 @@ class Player:
                     self.board.current_cell.update_options(letters=" ")
                     self.move_current_selection(self.direction, 1)
 
-
             # Arrow keys
             elif keysym == "Left":
-                if self.direction != ACROSS: self.direction = ACROSS
-                else: self.move_current_selection(ACROSS, -1, force_next_word=True)
+                if self.direction != ACROSS:
+                    self.direction = ACROSS
+                elif config.ON_DOUBLE_ARROW_KEY != "stay in cell":
+                    self.move_current_selection(ACROSS, -1, force_next_word=True)
             elif keysym == "Right":
-                if self.direction != ACROSS: self.direction = ACROSS
-                else: self.move_current_selection(ACROSS, 1, force_next_word=True)
+                if self.direction != ACROSS:
+                    self.direction = ACROSS
+                elif config.ON_DOUBLE_ARROW_KEY != "stay in cell":
+                    self.move_current_selection(ACROSS, 1, force_next_word=True)
             elif keysym == "Up":
-                if self.direction != DOWN: self.direction = DOWN
-                else: self.move_current_selection(DOWN, -1, force_next_word=True)
+                if self.direction != DOWN:
+                    self.direction = DOWN
+                elif config.ON_DOUBLE_ARROW_KEY != "stay in cell":
+                    self.move_current_selection(DOWN, -1, force_next_word=True)
             elif keysym == "Down":
-                if self.direction != DOWN: self.direction = DOWN
-                else: self.move_current_selection(DOWN, 1, force_next_word=True)
+                if self.direction != DOWN:
+                    self.direction = DOWN
+                elif config.ON_DOUBLE_ARROW_KEY != "stay in cell":
+                    self.move_current_selection(DOWN, 1, force_next_word=True)
+
+            elif keysym == "Tab":
+                distance = self.board.current_word.cells.index(self.board.current_cell)
+                print(1)
+
             self.move_current_selection(self.direction, 0)
 
         self.window.event_generate("<<update-selected-clue>>")
 
     def event_game_board_button_1(self, event):
         """On button-1 event for the canvas."""
-        self.game_board.focus_set()
+        if self.has_focus(self.chat_entry):
+            self.game_board.focus_set()
+            return
         x = (event.x - config.CANVAS_OFFSET - 1) // config.CELL_SIZE
         y = (event.y - config.CANVAS_OFFSET - 1) // config.CELL_SIZE
         if not (0 <= x < self.puzzle.width and 0 <= y < self.puzzle.height): return
@@ -583,6 +616,9 @@ class Player:
 
     def event_game_board_button_2(self, event):
         """On button-2 event for the canvas."""
+        if self.has_focus(self.chat_entry):
+            self.game_board.focus_set()
+            return
         self.game_board.event_generate("<Button-1>")
         self.window.update()
         window_x = self.game_board.winfo_rootx() + event.x
