@@ -268,14 +268,16 @@ class Board:
 
 
 # Application Classes
+MODIFIERS = {1: "Shift", 16: "Alt"}
+LETTERS = list(string.ascii_lowercase + "space")
+
 class Player:
     """The bare client crossword player. Handles nothing except for the crossword board."""
 
-    def __init__(self):
+    def __init__(self, name, color):
         """Magic method to initialize a new crossword player."""
-        self.direction = "across"
-        self.in_chat = False
-        self.color = "blue"
+        self.color = color
+        self.name = name
 
     def __repr__(self):
         """Magic method for string representation."""
@@ -295,7 +297,6 @@ class Player:
         self.window = tkinter.Tk()
         self.window.title(config.WINDOW_TITLE)
         self.window.resizable(False, False)
-        self.window.bind_all("<Key>", self.on_key_event)
 
         self.frame = tkinter.Frame(self.window)
         self.frame.pack(fill="both", padx=5, pady=5)
@@ -333,8 +334,6 @@ class Player:
             height=config.CELL_SIZE*self.puzzle.height + config.CANVAS_SPARE,
             highlightthickness=0)
         self.game_board.grid(row=1, column=0, padx=5-config.CANVAS_OFFSET, pady=5, sticky="nwe")
-        self.game_board.bind("<Button-1>", self.on_board_button1)
-        self.game_board.bind("<Button-2>" if platform.system() == "Darwin" else "<Button-3>", self.on_board_button2)
 
         self.game_menu = tkinter.Menu(self.game_board)
         self.game_menu.add_command(label="Check selected letter")
@@ -358,7 +357,6 @@ class Player:
         self.across_list.config(
             width=35, font=config.FONT_LIST, bd=0, selectborderwidth=0, selectbackground=config.FILL_SELECTED_WORD)
         self.across_list.grid(row=1, column=0, sticky="ns")
-        self.across_list.bind("<Button-1>", self.on_across_list_action)
 
         self.down = tkinter.Frame(self.clues)
         self.down.grid(row=1, column=0, padx=5, pady=5, sticky="ns")
@@ -372,7 +370,6 @@ class Player:
         self.down_list.config(
             width=35, font=config.FONT_LIST, bd=0, selectborderwidth=0, selectbackground=config.FILL_SELECTED_WORD)
         self.down_list.grid(row=1, column=0, sticky="ns")
-        self.down_list.bind("<Button-1>", self.on_down_list_action)
 
         self.chat_frame = tkinter.Frame(self.frame)
         self.chat_frame.grid(row=0, column=2, rowspan=9, sticky="NS")
@@ -386,10 +383,21 @@ class Player:
         self.chat_entry = tkinter.Entry(self.chat_frame)
         self.chat_entry.config(font=config.FONT_CHAT)
         self.chat_entry.grid(row=1, column=0, padx=6, pady=5, sticky="EW")
-        self.chat_entry.bind("<FocusIn>", self.toggle_in_chat)
-        self.chat_entry.bind("<FocusOut>", self.toggle_in_chat)
 
         logging.log(DEBUG, "%s created application widgets", repr(self))
+
+        self.window.bind_all("<Key>", self.event_key)
+        self.game_board.bind("<Button-1>", self.event_game_board_button_1)
+        button_2 = "<Button-2>" if platform.system() == "Darwin" else "<Button-3>"
+        self.game_board.bind(button_2, self.event_game_board_button_2)
+        self.across_list.bind("<Button-1>", self.event_across_list_button_1)
+        self.down_list.bind("<Button-1>", self.event_down_list_button_1)
+        self.chat_entry.bind("<Return>", self.event_chat_entry_return)
+
+        self.window.bind_all("<<update-selected-clue>>", self.event_update_selected_clue)
+        self.window.bind_all("<<update-game-info>>", self.event_update_game_info)
+        self.window.bind_all("<<update-clock>>", self.event_update_clock)
+
         logging.log(DEBUG, "%s bound events", repr(self))
 
         self.game_board.create_rectangle(
@@ -416,46 +424,9 @@ class Player:
         self.across_list.selection_set(0)
         logging.log(DEBUG, "%s populated clue lists", repr(self))
 
+        self.direction = "across"
         self.board.set_selected(0, 0, self.direction)
         logging.log(DEBUG, "%s built the application", repr(self))
-
-    def toggle_in_chat(self, event):
-        self.in_chat = not self.in_chat
-
-    def get_selected_clue(self):
-        """Get which clue in the clue lists is selected."""
-        selection = self.across_list.curselection()
-        if selection: return self.numbering.across[int(selection[0])]
-        selection = self.down_list.curselection()
-        if selection: return self.numbering.down[int(selection[0])]
-
-    def update_game_info(self, event=None):
-        """Update the current game info."""
-        if self.get_selected_clue() is None:
-            self.update_selected_clue()
-        clue = self.get_selected_clue().copy()
-        clue["dir"] = clue["dir"][0].capitalize()
-        self.game_info.config(text="%(num)i%(dir)s. %(clue)s" % clue)
-        self.window.after(100, self.update_game_info)
-
-    def update_selected_clue(self):
-        """Update the selected clue."""
-        word = self.board.current_word
-        if word.info["dir"] == ACROSS:
-            self.across_list.selection_clear(0, "end")
-            self.across_list.selection_set(self.numbering.across.index(word.info))
-            self.across_list.see(self.numbering.across.index(word.info))
-        else:
-           self.down_list.selection_clear(0, "end")
-           self.down_list.selection_set(self.numbering.down.index(word.info))
-           self.down_list.see(self.numbering.down.index(word.info))
-
-    def update_clock(self, event=None):
-        """Update the game time."""
-        seconds = time.time() - self.epoch
-        clock_time = str(datetime.timedelta(seconds=int(seconds)))
-        self.game_clock.config(text=clock_time)
-        self.window.after(100, self.update_clock)
 
     def move_current_selection(self, direction, distance, force_next_word=False):
         """Move the current selection by the distance in the specified direction."""
@@ -504,30 +475,97 @@ class Player:
                     y += s
             self.board.set_selected(x, y, self.direction)
 
-    def on_board_button1(self, event):
+    def get_selected_clue(self):
+        """Get which clue in the clue lists is selected."""
+        selection = self.across_list.curselection()
+        if selection: return self.numbering.across[int(selection[0])]
+        selection = self.down_list.curselection()
+        if selection: return self.numbering.down[int(selection[0])]
+
+    def chat_entry_has_focus(self):
+        """Check if the chat entry has focus."""
+        return str(self.window.focus_get()).endswith(str(id(self.chat_entry)))
+
+    def event_update_selected_clue(self, event):
+        """Update the selected clue."""
+        word = self.board.current_word
+        if word.info["dir"] == ACROSS:
+            self.across_list.selection_clear(0, "end")
+            self.across_list.selection_set(self.numbering.across.index(word.info))
+            self.across_list.see(self.numbering.across.index(word.info))
+        else:
+           self.down_list.selection_clear(0, "end")
+           self.down_list.selection_set(self.numbering.down.index(word.info))
+           self.down_list.see(self.numbering.down.index(word.info))
+
+    def event_update_game_info(self, event):
+        """Update the current game info."""
+        if self.get_selected_clue() is None:
+            self.window.event_generate("<<update-selected-clue>>")
+        clue = self.get_selected_clue().copy()
+        clue["dir"] = clue["dir"][0].capitalize()
+        self.game_info.config(text="%(num)i%(dir)s. %(clue)s" % clue)
+        self.window.after(100, self.window.event_generate, "<<update-game-info>>")
+
+    def event_update_clock(self, event):
+        """Update the game time."""
+        seconds = time.time() - self.epoch
+        clock_time = str(datetime.timedelta(seconds=int(seconds)))
+        self.game_clock.config(text=clock_time)
+        self.window.after(100, self.window.event_generate, "<<update-clock>>")
+
+    def event_key(self, event):
+        """Key event for the entire crossword player since canvas widgets have no active state. To add rebus characters
+        the shift key is used."""
+        modifier = MODIFIERS.get(event.state)
+        keysym = event.keysym
+
+        if not self.chat_entry_has_focus():
+            if keysym.lower() in LETTERS and event.char is not "":
+                letters = keysym.upper() if keysym != "space" else ""
+                if modifier == "Shift": letters = self.board.current_cell.letters + letters
+                self.board.current_cell.update_options(letters=letters, color=self.color)
+                if modifier != "Shift": self.move_current_selection(self.direction, 1)
+            elif event.keysym == "BackSpace":
+                if modifier == "Shift": letters = self.board.current_cell.letters[:-1]
+                else: letters = ""
+                self.board.current_cell.update_options(letters=letters)
+                if modifier != "Shift": self.move_current_selection(self.direction, -1)
+
+            # Arrow keys
+            elif keysym == "Left":
+                self.move_current_selection(ACROSS, -1, force_next_word=True)
+            elif keysym == "Right":
+                self.move_current_selection(ACROSS, 1, force_next_word=True)
+            elif keysym == "Up":
+                self.move_current_selection(DOWN, -1, force_next_word=True)
+            elif keysym == "Down":
+                self.move_current_selection(DOWN, 1, force_next_word=True)
+
+        self.window.event_generate("<<update-selected-clue>>")
+
+    def event_game_board_button_1(self, event):
         """On button-1 event for the canvas."""
-        if self.in_chat:
-            self.game_board.focus_set()
-            return
+        self.game_board.focus_set()
         x = (event.x - config.CANVAS_OFFSET - 1) // config.CELL_SIZE
         y = (event.y - config.CANVAS_OFFSET - 1) // config.CELL_SIZE
         if not (0 <= x < self.puzzle.width and 0 <= y < self.puzzle.height): return
         self.board.current_word.update_options(fill=config.FILL_UNSELECTED)
         if self.board[x, y] == self.board.current_cell: self.direction = ["down", "across"][self.direction == "down"]
         self.board.set_selected(x, y, self.direction)
-        self.update_selected_clue()
+        self.window.event_generate("<<update-selected-clue>>")
         self.game_board.focus_set()
 
-    def on_board_button2(self, event):
+    def event_game_board_button_2(self, event):
         """On button-2 event for the canvas."""
-        self.on_board_button1(event)
+        self.game_board.event_generate("<Button-1>")
         self.window.update()
         window_x = self.game_board.winfo_rootx() + event.x
         window_y = self.game_board.winfo_rooty() + event.y
         self.game_menu.post(window_x, window_y)
         self.game_board.focus_set()
 
-    def on_across_list_action(self, event):
+    def event_across_list_button_1(self, event):
         """On button-1 and key event for the across clue list."""
         self.board.current_word.update_options(fill=config.FILL_UNSELECTED)
         self.direction = "across"
@@ -536,7 +574,7 @@ class Player:
         x, y = index_to_position(cell_number, self.puzzle.width)
         self.board.set_selected(x, y, self.direction)
 
-    def on_down_list_action(self, event):
+    def event_down_list_button_1(self, event):
         """On button-1 and key event for the down clue list."""
         self.board.current_word.update_options(fill=config.FILL_UNSELECTED)
         self.direction = "down"
@@ -545,7 +583,7 @@ class Player:
         x, y = index_to_position(cell_number, self.puzzle.width)
         self.board.set_selected(x, y, self.direction)
 
-    def on_chat_return(self):
+    def event_chat_entry_return(self, event):
         """On event for when the user presses enter in the chat entry. This is just a filler."""
         self.chat_text.config(state="normal")
 
@@ -559,42 +597,12 @@ class Player:
         self.chat_text.config(state="disabled")
         self.chat_entry.delete(0, "end")
 
-    def on_key_event(self, event):
-        """On key event for the entire crossword player since canvas widgets have no active state. To add rebus
-        characters the shift key is used."""
-        if event.char in string.ascii_lowercase + " " and event.char is not "" and not self.in_chat:
-            letter = event.char if event.char != " " else ""
-            self.board.current_cell.update_options(letters=letter.upper(), color=self.color)
-            self.move_current_selection(self.direction, 1)
-        elif event.char in string.ascii_uppercase and event.char is not "" and not self.in_chat:
-            letters = self.board.current_cell.letters + (event.char if event.char != " " else "")
-            self.board.current_cell.update_options(letters=letters.upper(), color=self.color)
-        elif event.keysym == "BackSpace" and not self.in_chat:
-            self.board.current_cell.update_options(letters="")
-            self.move_current_selection(self.direction, -1)
-
-        # Chat
-        if event.keysym == "Return" and self.in_chat:
-            self.on_chat_return()
-
-        # Arrow keys
-        elif event.keysym == "Left":
-            self.move_current_selection(ACROSS, -1, force_next_word=True)
-        elif event.keysym == "Right":
-            self.move_current_selection(ACROSS, 1, force_next_word=True)
-        elif event.keysym == "Up":
-            self.move_current_selection(DOWN, -1, force_next_word=True)
-        elif event.keysym == "Down":
-            self.move_current_selection(DOWN, 1, force_next_word=True)
-
-        self.update_selected_clue()
-
     def run_application(self):
         """Run the application."""
         logging.log(INFO, "%s application running", repr(self))
         self.epoch = time.time()
-        self.update_game_info()
-        self.update_clock()
+        self.window.event_generate("<<update-game-info>>")
+        self.window.event_generate("<<update-clock>>")
         self.game_board.focus_set()
         self.window.mainloop()
 
@@ -608,18 +616,18 @@ class Player:
 # Sockets
 def send_all(sock, message):
     """Pack the message length and content for sending larger messages."""
-    message = struct.pack('>I', len(message)) + message
+    message = struct.pack('>I', len(message)) + message  # Pack the message length and the message
     sock.sendall(message)
 
 def receive_all(sock):
     """Read message length and receive the corresponding amount of data."""
-    message_length = _receive_all(sock, 4)
+    message_length = _receive_all(sock, 4)  # Unpack the message length
     if not message_length: return None
-    message_length = struct.unpack('>I', message_length)[0]
+    message_length = struct.unpack('>I', message_length)[0]  # Unpack the message
     return _receive_all(sock, message_length)
 
 def _receive_all(sock, buffer_size):
-    """Helper function to receive a specified amount of data."""
+    """Secondary function to receive a specified amount of data."""
     message = b''
     while len(message) < buffer_size:
         packet = sock.recv(buffer_size - len(message))
@@ -630,7 +638,7 @@ def _receive_all(sock, buffer_size):
 
 # Socket Models
 class Handler:
-    """Server side client handler. Continuously receives data while maintaining send capability."""
+    """Server side client handler. Continuously receives data while offering simultaneous sending."""
 
     def __init__(self, socket, address, server):
         self.socket = socket
@@ -641,7 +649,7 @@ class Handler:
         logging.log(INFO, "%s initialized", repr(self))
 
 def test():
-    cp = Player()
+    cp = Player("Noah", "blue")
     cp.load_puzzle("puzzles/Nov0705.puz")
     cp.build_application()
     cp.run_application()
