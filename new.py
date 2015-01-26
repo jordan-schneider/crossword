@@ -59,8 +59,8 @@ class Config:
     FILL_INCORRECT = "red"
     ON_DOUBLE_ARROW_KEY = "stay in cell"  # ["stay in cell", "move in direction"]
     ON_SPACE_KEY = "clear and skip"  # ["clear and skip", "change direction"]
-    ON_ENTER_KEY = "next word"  # ["next word"]
-    ON_TAB_KEY = "next word"  # ["next word"]
+    #ON_ENTER_KEY = "next word"  # ["next word"]
+    #ON_TAB_KEY = "next word"  # ["next word"]
     ON_LAST_LETTER_GO_TO = "next word"  # ["next word", "first cell", "same cell"]
 
     WINDOW_TITLE = "NYTimes Crossword Puzzle"
@@ -240,7 +240,6 @@ class Board:
             solution = "".join([self.puzzle.solution[info["cell"] + i] for i in range(length)])
             self.across_words.append(Word(cells, info, solution))
         for info in self.numbering.down:
-            cells = []
             x, y = index_to_position(info["cell"], self.puzzle.width)
             length = info["len"]
             cells = [self[x, y+i] for i in range(length)]
@@ -252,7 +251,7 @@ class Board:
         """Set the word at the position of the origin letter (and of the direction) as selected."""
         origin = self[x, y]
         if direction == ACROSS: words = self.across_words
-        elif direction == DOWN: words = self.down_words
+        else: words = self.down_words
         if self.current_word:
             self.current_word.update_options(fill=config.FILL_UNSELECTED)
         for word in words:
@@ -266,14 +265,14 @@ class Board:
         """Set the word at the position of the origin letter (and of the direction) as unselected."""
         origin = self[x, y]
         if direction == ACROSS: words = self.across_words
-        elif direction == DOWN: words = self.down_words
+        else: words = self.down_words
         for word in words:
             if origin in word.cells:
                 word.update_options(fill=config.FILL_UNSELECTED)
 
 
 # Application Classes
-MODIFIERS = {1: "Shift", 16: "Alt"}
+MODIFIERS = {1: "Shift"}
 LETTERS = list(string.ascii_lowercase)
 
 def dummy_key_event(keysym, modifier):
@@ -593,6 +592,8 @@ class Player:
                 else: letters = ""
                 self.board.current_cell.update_options(letters=letters)
                 if modifier != "Shift": self.move_current_selection(self.direction, -1)
+            elif keysym == "Return":
+                self.window.event_generate("<<event-tab-key-override>>")
             elif keysym == "space":
                 if config.ON_SPACE_KEY == "change direction":
                     self.direction = [ACROSS, DOWN][[DOWN, ACROSS].index(self.direction)]
