@@ -269,7 +269,7 @@ class Board:
 
 # Application Classes
 MODIFIERS = {1: "Shift", 16: "Alt"}
-LETTERS = list(string.ascii_lowercase + "space")
+LETTERS = list(string.ascii_lowercase)
 
 class Player:
     """The bare client crossword player. Handles nothing except for the crossword board."""
@@ -522,25 +522,38 @@ class Player:
 
         if not self.chat_entry_has_focus():
             if keysym.lower() in LETTERS and event.char is not "":
-                letters = keysym.upper() if keysym != "space" else ""
+                letters = keysym.upper()
                 if modifier == "Shift": letters = self.board.current_cell.letters + letters
                 self.board.current_cell.update_options(letters=letters, color=self.color)
                 if modifier != "Shift": self.move_current_selection(self.direction, 1)
-            elif event.keysym == "BackSpace":
+            elif keysym == "BackSpace":
                 if modifier == "Shift": letters = self.board.current_cell.letters[:-1]
                 else: letters = ""
                 self.board.current_cell.update_options(letters=letters)
                 if modifier != "Shift": self.move_current_selection(self.direction, -1)
+            elif keysym == "space":
+                if config.ON_SPACE_KEY == "change direction":
+                    self.direction = [ACROSS, DOWN][[DOWN, ACROSS].index(self.direction)]
+                    self.move_current_selection(self.direction, 0)
+                else:
+                    self.board.current_cell.update_options(letters=" ")
+                    self.move_current_selection(self.direction, 1)
+
 
             # Arrow keys
             elif keysym == "Left":
-                self.move_current_selection(ACROSS, -1, force_next_word=True)
+                if self.direction != ACROSS: self.direction = ACROSS
+                else: self.move_current_selection(ACROSS, -1, force_next_word=True)
             elif keysym == "Right":
-                self.move_current_selection(ACROSS, 1, force_next_word=True)
+                if self.direction != ACROSS: self.direction = ACROSS
+                else: self.move_current_selection(ACROSS, 1, force_next_word=True)
             elif keysym == "Up":
-                self.move_current_selection(DOWN, -1, force_next_word=True)
+                if self.direction != DOWN: self.direction = DOWN
+                else: self.move_current_selection(DOWN, -1, force_next_word=True)
             elif keysym == "Down":
-                self.move_current_selection(DOWN, 1, force_next_word=True)
+                if self.direction != DOWN: self.direction = DOWN
+                else: self.move_current_selection(DOWN, 1, force_next_word=True)
+            self.move_current_selection(self.direction, 0)
 
         self.window.event_generate("<<update-selected-clue>>")
 
