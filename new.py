@@ -358,6 +358,12 @@ class Player:
             width=35, font=config.FONT_LIST, bd=0, selectborderwidth=0, selectbackground=config.FILL_SELECTED_WORD)
         self.across_list.grid(row=1, column=0, sticky="ns")
 
+        self.across_scrollbar = tkinter.Scrollbar(self.across)
+        self.across_scrollbar.grid(row=1, column=1, sticky="ns")
+
+        self.across_list.config(yscrollcommand=self.across_scrollbar.set)
+        self.across_scrollbar.config(command=self.across_list.yview)
+
         self.down = tkinter.Frame(self.clues)
         self.down.grid(row=1, column=0, padx=5, pady=5, sticky="ns")
         self.down.rowconfigure(1, weight=1)
@@ -370,6 +376,12 @@ class Player:
         self.down_list.config(
             width=35, font=config.FONT_LIST, bd=0, selectborderwidth=0, selectbackground=config.FILL_SELECTED_WORD)
         self.down_list.grid(row=1, column=0, sticky="ns")
+
+        self.down_scrollbar = tkinter.Scrollbar(self.down)
+        self.down_scrollbar.grid(row=1, column=1, sticky="ns")
+
+        self.down_list.config(yscrollcommand=self.down_scrollbar.set)
+        self.down_scrollbar.config(command=self.down_list.yview)
 
         self.chat_frame = tkinter.Frame(self.frame)
         self.chat_frame.grid(row=0, column=2, rowspan=9, sticky="NS")
@@ -601,9 +613,9 @@ class Player:
         self.chat_text.config(state="normal")
 
         start = self.chat_text.index("end")+"-1l" # Not sure why
-        end = start+"+3c"
+        end = start + "+%ic"%len(self.name)
 
-        self.chat_text.insert("end", "You: %s" % self.chat_entry.get() + "\n")
+        self.chat_text.insert("end", "%s: %s" % (self.name, self.chat_entry.get()) + "\n")
         self.chat_text.tag_add("you", start, end)
         self.chat_text.see("end")
 
@@ -662,7 +674,7 @@ class Handler:
         logging.log(INFO, "%s initialized", repr(self))
 
 def test():
-    cp = Player("Noah", "blue")
+    cp = Player("Noah", "black")
     cp.load_puzzle("puzzles/Nov0705.puz")
     cp.build_application()
     cp.run_application()
