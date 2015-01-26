@@ -417,7 +417,8 @@ class Player:
         logging.log(DEBUG, "%s created application widgets", repr(self))
 
         self.window.bind_all("<Key>", self.event_key)
-        self.window.bind_all("<Tab>", self.event_key, dummy_key_event("Tab", 0))
+        self.window.bind_all("<Tab>", self.event_tab_key)
+        self.window.bind_all("<Shift-Tab>", self.event_shift_tab_key)
         self.game_board.bind("<Button-1>", self.event_game_board_button_1)
         button_2 = "<Button-2>" if platform.system() == "Darwin" else "<Button-3>"
         self.game_board.bind(button_2, self.event_game_board_button_2)
@@ -428,6 +429,9 @@ class Player:
         self.window.bind_all("<<update-selected-clue>>", self.event_update_selected_clue)
         self.window.bind_all("<<update-game-info>>", self.event_update_game_info)
         self.window.bind_all("<<update-clock>>", self.event_update_clock)
+
+        self.window.bind_all("<<event-tab-key-override>>", self.event_tab_key_override)
+        self.window.bind_all("<<event-shift-tab-key-override>>", self.event_shift_tab_key_override)
 
         logging.log(DEBUG, "%s bound events", repr(self))
 
@@ -467,8 +471,8 @@ class Player:
         self.direction = direction
         if direction == ACROSS:
             for i in range(0, distance, s):
-                if x + s >= self.puzzle.width: at_word_end = True
-                elif not self.board[x+s, y] in self.board.current_word.cells: at_word_end = True
+                if x + s >= self.puzzle.width or x + s < 0: at_word_end = True
+                elif self.board[x+s, y] not in self.board.current_word.cells: at_word_end = True
                 else: at_word_end = False
                 if at_word_end:
                     if config.ON_LAST_LETTER_GO_TO == "first cell" and not force_next_word:
@@ -482,13 +486,14 @@ class Player:
                         x, y = index_to_position(next_cell_number, self.puzzle.width)
                         self.board.current_word.update_options(fill=config.FILL_UNSELECTED)
                         if s == -1: x += next_cell_info["len"] - 1
+                        self.board.set_selected(x, y, self.direction)
                 else:
                     x += s
             self.board.set_selected(x, y, self.direction)
         elif direction == DOWN:
             for i in range(0, distance, s):
-                if y + s >= self.puzzle.height: at_word_end = True
-                elif not self.board[x, y+s] in self.board.current_word.cells: at_word_end = True
+                if y + s >= self.puzzle.height or y + s < 0: at_word_end = True
+                elif self.board[x, y+s] not in self.board.current_word.cells: at_word_end = True
                 else: at_word_end = False
                 if at_word_end:
                     if config.ON_LAST_LETTER_GO_TO == "first cell" and not force_next_word:
@@ -502,6 +507,7 @@ class Player:
                         x, y = index_to_position(next_cell_number, self.puzzle.width)
                         self.board.current_word.update_options(fill=config.FILL_UNSELECTED)
                         if s == -1: y += next_cell_info["len"] - 1
+                        self.board.set_selected(x, y, self.direction)
                 else:
                     y += s
             self.board.set_selected(x, y, self.direction)
@@ -544,6 +550,31 @@ class Player:
         clock_time = str(datetime.timedelta(seconds=int(seconds)))
         self.game_clock.config(text=clock_time)
         self.window.after(100, self.window.event_generate, "<<update-clock>>")
+
+    def event_tab_key(self, event):
+        """Special tab key event in order to prevent tkinter from cycling through widgets. Has to return break quickly
+        or else tkinter will do its own thing."""
+        self.window.event_generate("<<event-tab-key-override>>")
+        return "break"
+
+    def event_shift_tab_key(self, event):
+        """Special shift tab key event in order to prevent tkinter from cycling through widgets. Has to return break
+        quickly or else tkinter will do its own thing."""
+        self.window.event_generate("<<event-shift-tab-key-override>>")
+        return "break"
+
+    def event_tab_key_override(self, event):
+        """Special call for tab."""
+        distance = len(self.board.current_word.cells) - self.board.current_word.cells.index(self.board.current_cell)
+        self.move_current_selection(self.direction, distance, force_next_word=True)
+
+    def event_shift_tab_key_override(self, event):
+        """Special call for shift tab."""
+        numbering = self.numbering.across if self.direction == ACROSS else self.numbering.down
+        last_word_info = numbering[numbering.index(self.board.current_word.info) - 1]
+        length = last_word_info["len"]
+        distance = self.board.current_word.cells.index(self.board.current_cell) + length
+        self.move_current_selection(self.direction, -distance, force_next_word=True)
 
     def event_key(self, event):
         """Key event for the entire crossword player since canvas widgets have no active state. To add rebus characters
@@ -591,10 +622,6 @@ class Player:
                     self.direction = DOWN
                 elif config.ON_DOUBLE_ARROW_KEY != "stay in cell":
                     self.move_current_selection(DOWN, 1, force_next_word=True)
-
-            elif keysym == "Tab":
-                distance = self.board.current_word.cells.index(self.board.current_cell)
-                print(1)
 
             self.move_current_selection(self.direction, 0)
 

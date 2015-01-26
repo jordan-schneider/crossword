@@ -3,7 +3,6 @@
   <component name="ChangeListManager">
     <list default="true" id="d57deb72-e8d9-4e58-a87a-5b4bdde61fb0" name="Default" comment="">
       <change type="MODIFICATION" beforePath="$PROJECT_DIR$/new.py" afterPath="$PROJECT_DIR$/new.py" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/.idea/workspace.xml" afterPath="$PROJECT_DIR$/.idea/workspace.xml" />
     </list>
     <ignored path="crossword.iws" />
     <ignored path=".idea/workspace.xml" />
@@ -26,7 +25,7 @@
     <favorites_list name="crossword" />
   </component>
   <component name="FileEditorManager">
-    <splitter split-orientation="horizontal" split-proportion="0.8828125">
+    <splitter split-orientation="horizontal" split-proportion="0.7710937">
       <split-first>
         <leaf>
           <file leaf-file-name="config.txt" pinned="false" current-in-tab="false">
@@ -54,8 +53,8 @@
           <file leaf-file-name="new.py" pinned="false" current-in-tab="true">
             <entry file="file://$PROJECT_DIR$/new.py">
               <provider selected="true" editor-type-id="text-editor">
-                <state vertical-scroll-proportion="-2.04" vertical-offset="5946" max-vertical-offset="11025">
-                  <caret line="308" column="56" selection-start-line="308" selection-start-column="56" selection-end-line="308" selection-end-column="56" />
+                <state vertical-scroll-proportion="10.223077" vertical-offset="540" max-vertical-offset="11430">
+                  <caret line="479" column="25" selection-start-line="479" selection-start-column="25" selection-end-line="479" selection-end-column="25" />
                   <folding>
                     <element signature="e#34#48#0" expanded="true" />
                   </folding>
@@ -70,7 +69,7 @@
           <file leaf-file-name="new.py" pinned="false" current-in-tab="true">
             <entry file="file://$PROJECT_DIR$/new.py">
               <provider selected="true" editor-type-id="text-editor">
-                <state vertical-scroll-proportion="0.35384616" vertical-offset="700" max-vertical-offset="11025">
+                <state vertical-scroll-proportion="0.35384616" vertical-offset="700" max-vertical-offset="11430">
                   <caret line="62" column="45" selection-start-line="62" selection-start-column="45" selection-end-line="62" selection-end-column="45" />
                   <folding>
                     <element signature="e#34#48#0" expanded="true" />
@@ -793,8 +792,8 @@
     </entry>
     <entry file="file://$PROJECT_DIR$/new.py">
       <provider selected="true" editor-type-id="text-editor">
-        <state vertical-scroll-proportion="-2.04" vertical-offset="5946" max-vertical-offset="11025">
-          <caret line="308" column="56" selection-start-line="308" selection-start-column="56" selection-end-line="308" selection-end-column="56" />
+        <state vertical-scroll-proportion="10.223077" vertical-offset="540" max-vertical-offset="11430">
+          <caret line="479" column="25" selection-start-line="479" selection-start-column="25" selection-end-line="479" selection-end-column="25" />
           <folding>
             <element signature="e#34#48#0" expanded="true" />
           </folding>
