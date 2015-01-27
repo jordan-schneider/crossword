@@ -787,7 +787,6 @@ class Handler:
 
     def stop(self):
         self.active = False
-        self.socket.close()
         logging.log(INFO, "%s socket closed", repr(self))
         self.server.handlers.remove(self)
         logging.log(INFO, "%s stopped", repr(self))
@@ -801,6 +800,7 @@ class Server:
         self.messages = queue.Queue()
         self.handlers = []
         self.epoch = time.time()
+        self.progress = []
         self.active = True
 
         self.puzzle = puz.read("puzzles/Nov0705.puz")  # For testing                                          # puz.read
@@ -827,7 +827,7 @@ class Server:
             logging.log(INFO, "%s bound" % repr(self))
         except OSError as e:
             logging.log(FATAL, "%s could not bind: %s", repr(self), e)
-            sys.exit(1)
+            quit()
 
     def send(self, message):
         """Send a message to every handler."""
@@ -847,6 +847,7 @@ class Server:
                 handler.start()
                 handler.send({"type": "puzzle", "message": self.puzzle})
                 handler.send({"type": "epoch", "message": self.epoch})
+                handler.send({"type": "progress", "message": self.progress})
             except Exception as e:
                 logging.log(ERROR, "%s error in search loop: %s", repr(self), e)
                 self.stop()
@@ -874,6 +875,7 @@ class Server:
             if message["type"] == "game":
                 x, y = message["position"]
                 self.puzzle.fill[position_to_index(x, y, self.puzzle.width)] = message["letters"]
+                self.progress.append(message)
             self.send(message)
 
     def start(self):
@@ -898,7 +900,6 @@ class Server:
         self.socket.close()
         logging.log(INFO, "%s socket closed", repr(self))
         logging.log(INFO, "%s shut down", repr(self))
-        sys.exit(0)
 
 class Client(Player):
     """A networking framework built on top of the existing crossword player."""
@@ -926,7 +927,7 @@ class Client(Player):
             logging.log(DEBUG, "%s bound", repr(self))
         except OSError as e:
             logging.log(FATAL, "%s could not bind: %s", repr(self), e)
-            sys.exit(1)
+            quit()
 
     def send(self, message):
         """Send a message to the server."""
@@ -970,8 +971,11 @@ class Client(Player):
             message = self.messages.get()
             if message["type"] == "epoch":
                 self.epoch = message["message"]
+            elif message["type"] == "progress":
+                for message in message["message"]:
+                    self.messages.put(message)
             elif message["type"] == "stop":
-                logging.log(FATAL, "%s server shut down", repr(self))
+                logging.log(FATAL, "%s received stop", repr(self))
                 self.stop()
             elif message["type"] == "game":
                 x, y = message["position"]
@@ -1015,7 +1019,6 @@ class Client(Player):
         self.socket.close()
         logging.log(DEBUG, "%s socket closed", repr(self))
         logging.log(DEBUG, "%s stopped", repr(self))
-        sys.exit(0)
 
 
 if len(sys.argv) == 1:
