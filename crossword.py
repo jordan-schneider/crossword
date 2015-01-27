@@ -156,6 +156,9 @@ class Cell:
 
         if self.type == EMPTY:
             self.fill = config.FILL_EMPTY
+        elif self.type != LETTER:
+            self.letters = self.type  # This worked out really well
+            self.type = LETTER
 
     def draw_to_canvas(self):
         """Draw the cell, its fill, letter and color, and number to the canvas at the cell's position."""
@@ -297,7 +300,9 @@ class Player:
 
     def load_puzzle(self, puzzle):
         """Load a puzzle to the window."""
-        self.puzzle = puz.read(puzzle)
+        self.puzzle = puz.read(puzzle)                                                                        # puz.read
+        self.puzzle.fill = list(self.puzzle.fill)
+
         self.numbering = self.puzzle.clue_numbering()
         for clue in self.numbering.across: clue.update({"dir": ACROSS})
         for clue in self.numbering.down: clue.update({"dir": DOWN})
@@ -440,7 +445,7 @@ class Player:
         for y in range(self.puzzle.height):
             for x in range(self.puzzle.width):
                 cell = Cell(
-                    self.game_board, self.puzzle.fill[y*self.puzzle.height + x], config.FONT_COLOR,
+                    self.game_board, self.puzzle.fill[position_to_index(x, y, self.puzzle.width)], config.FONT_COLOR,
                     config.FILL_DESELECTED, config.CANVAS_OFFSET + x*config.CELL_SIZE,
                     config.CANVAS_OFFSET + y*config.CELL_SIZE, number=numbers.get(y*self.puzzle.height + x, ""))
                 self.board[x, y] = cell
@@ -798,7 +803,9 @@ class Server:
         self.epoch = time.time()
         self.active = True
 
-        self.puzzle = puz.read("puzzles/Nov0705.puz")  # For testing
+        self.puzzle = puz.read("puzzles/Nov0705.puz")  # For testing                                          # puz.read
+        self.puzzle.fill = list(self.puzzle.fill)
+
         self.numbering = self.puzzle.clue_numbering()
         for clue in self.numbering.across: clue.update({"dir": ACROSS})
         for clue in self.numbering.down: clue.update({"dir": DOWN})
@@ -856,6 +863,7 @@ class Server:
                 self.stop()
 
     def handle(self, message):
+        """Handle messages from the queue."""
         handler, message = message
         if message["type"] == "info":  # Special client message to send information
             handler.color = message["color"]
@@ -864,10 +872,12 @@ class Server:
             message["color"] = handler.color
             message["name"] = handler.name
             if message["type"] == "game":
-                pass
+                x, y = message["position"]
+                self.puzzle.fill[position_to_index(x, y, self.puzzle.width)] = message["letters"]
             self.send(message)
 
     def start(self):
+        """Start the server."""
         self.active = True
         self.bind()
         self._search = threading.Thread(target=self.search)
@@ -881,6 +891,7 @@ class Server:
             self.stop()
 
     def stop(self):
+        """Stop the server."""
         if self.active == False:
             return
         self.active = False
