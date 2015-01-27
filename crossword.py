@@ -751,7 +751,7 @@ class Handler:
         self.address = address
         self.server = server
 
-        self.active = False
+        self.active = True
         logging.log(INFO, "%s initialized", repr(self))
 
     def __repr__(self):
@@ -781,14 +781,13 @@ class Handler:
 
     def start(self):
         """Start a the handler."""
-        self.active = True
         self._receive = threading.Thread(target=self.receive)
         self._receive.start()
         logging.log(INFO, "%s started", repr(self))
 
     def stop(self):
         self.active = False
-        logging.log(INFO, "%s socket closed", repr(self))
+        self.server.send({"name": "server", "color": "black", "message": "%s left" % self.name})  # Unrestricted access
         self.server.handlers.remove(self)
         logging.log(INFO, "%s stopped", repr(self))
 
@@ -870,6 +869,7 @@ class Server:
         if message["type"] == "info":  # Special client message to send information
             handler.color = message["color"]
             handler.name = message["name"]
+            self.send({"name": "Server", "color": "black", "message": "%s joined" % handler.name})
         else:
             message["color"] = handler.color
             message["name"] = handler.name
@@ -913,7 +913,7 @@ class Client(Player):
         self.name = name
         self.color = color
         self.messages = queue.Queue()
-        self.active = False
+        self.active = True
         logging.log(DEBUG, "%s initialized", repr(self))
 
     def __repr__(self):
@@ -996,7 +996,6 @@ class Client(Player):
         """Start the client."""
         self.ready = False
 
-        self.active = True
         self.bind()
         self.send({"type": "info", "name": self.name, "color": self.color})
         self._receive = threading.Thread(target=self.receive)
