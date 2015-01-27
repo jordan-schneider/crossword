@@ -973,6 +973,7 @@ class Client(Player):
             elif message["type"] == "history":
                 for message in message["message"]:
                     self.messages.put(message)
+                self.send({"type": "info", "name": self.name, "color": self.color})  # Now it is time to send info
             elif message["type"] == "stop":
                 logging.log(FATAL, "%s received stop", repr(self))
                 self.stop()
@@ -995,7 +996,6 @@ class Client(Player):
         self.ready = False
 
         self.bind()
-        self.send({"type": "info", "name": self.name, "color": self.color})
         self._receive = threading.Thread(target=self.receive)
         self._receive.start()
 
