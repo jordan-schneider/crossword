@@ -127,6 +127,32 @@ config.read_file(config.FILE_CONFIG)
 logging.log(DEBUG, "config namespace loaded")
 
 
+# Player Data Container
+PLAYER_DATA = {
+    # Continuous
+    "letters-lifetime": 0,
+    "chat-entries": 0,
+    "chat-words": 0,
+    "chat-letters": 0,
+
+    # Calculated
+    "letters-final": 0,
+    "letters-correct": 0,
+
+}
+
+SERVER_DATA = {
+    # Referenced
+    "puzzle-width": 0,
+    "puzzle-height": 0,
+    "puzzle-letters": 0,
+    "puzzle-words": 0,
+
+    # Calculated
+    "time-fill": 0,
+    "time-finish": 0,
+}
+
 # Crossword Models
 def index_to_position(index, array_width):
     """Determine the coordinates of an index in an array of specified width."""
@@ -796,11 +822,13 @@ class Server:
     def __init__(self, address):
         """Magic method to initialize a new server."""
         self.address = address
+
         self.messages = queue.Queue()
         self.handlers = []
         self.epoch = time.time()
         self.history = []
         self.active = True
+        self.data = SERVER_DATA.copy()
 
         self.puzzle = puz.read("puzzles/Nov0705.puz")  # For testing                                          # puz.read
         self.puzzle.fill = list(self.puzzle.fill)
@@ -912,6 +940,7 @@ class Client(Player):
         self.color = color
         self.messages = queue.Queue()
         self.active = True
+        self.data = PLAYER_DATA.copy()
         logging.log(DEBUG, "%s initialized", repr(self))
 
     def __repr__(self):
