@@ -157,7 +157,6 @@ class Cell:
         if self.type == EMPTY:
             self.fill = config.FILL_EMPTY
         elif self.type != LETTER:
-            self.letters = self.type  # This worked out really well
             self.type = LETTER
 
     def draw_to_canvas(self):
@@ -787,7 +786,7 @@ class Handler:
 
     def stop(self):
         self.active = False
-        self.server.send({"name": "server", "color": "black", "message": "%s left" % self.name})  # Unrestricted access
+        self.server.send({"name": "server", "color": "black", "type": "chat", "message": "%s left\n" % self.name})
         self.server.handlers.remove(self)
         logging.log(INFO, "%s stopped", repr(self))
 
@@ -800,7 +799,7 @@ class Server:
         self.messages = queue.Queue()
         self.handlers = []
         self.epoch = time.time()
-        self.progress = []
+        self.history = []
         self.active = True
 
         self.puzzle = puz.read("puzzles/Nov0705.puz")  # For testing                                          # puz.read
@@ -847,7 +846,7 @@ class Server:
                 handler.start()
                 handler.send({"type": "puzzle", "message": self.puzzle})
                 handler.send({"type": "epoch", "message": self.epoch})
-                handler.send({"type": "progress", "message": self.progress})
+                handler.send({"type": "history", "message": self.history})
             except Exception as e:
                 logging.log(ERROR, "%s error in search loop: %s", repr(self), e)
                 self.stop()
@@ -869,19 +868,18 @@ class Server:
         if message["type"] == "info":  # Special client message to send information
             handler.color = message["color"]
             handler.name = message["name"]
-            self.send({"name": "Server", "color": "black", "message": "%s joined" % handler.name})
+            self.send({"name": "Server", "color": "black", "type": "chat", "message": "%s joined\n" % handler.name})
         else:
             message["color"] = handler.color
             message["name"] = handler.name
             if message["type"] == "game":
                 x, y = message["position"]
                 self.puzzle.fill[position_to_index(x, y, self.puzzle.width)] = message["letters"]
-                self.progress.append(message)
+            self.history.append(message)
             self.send(message)
 
     def start(self):
         """Start the server."""
-        self.active = True
         self.bind()
         self._search = threading.Thread(target=self.search)
         self._search.start()
@@ -954,7 +952,7 @@ class Client(Player):
             try:
                 data = receive_all(self.socket)
                 message = pickle.loads(data)
-                if message["type"] == "puzzle":  # Initial data transaction for setup
+                if message.get("type") == "puzzle":  # Initial data transaction for setup
                     self.puzzle = message["message"]
                     self.numbering = self.puzzle.clue_numbering()
                     self.board = Board(self.puzzle, self.numbering)
@@ -972,7 +970,7 @@ class Client(Player):
             message = self.messages.get()
             if message["type"] == "epoch":
                 self.epoch = message["message"]
-            elif message["type"] == "progress":
+            elif message["type"] == "history":
                 for message in message["message"]:
                     self.messages.put(message)
             elif message["type"] == "stop":
