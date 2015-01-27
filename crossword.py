@@ -363,27 +363,23 @@ class Player:
         self.line.config(height=config.WINDOW_LINE_HEIGHT, bg=config.WINDOW_LINE_FILL)
         self.line.grid(row=1, column=0, columnspan=2, padx=5, sticky="we")
 
-        self.space = tkinter.Frame(self.frame)
-        self.space.config(height=config.WINDOW_SPACE_HEIGHT)
-        self.space.grid(row=2, column=0, columnspan=2, padx=8, sticky="we")
-
         self.game = tkinter.Frame(self.frame)
-        self.game.grid(row=3, column=0)
+        self.game.grid(row=3, column=0, pady=5)
 
         self.game_info = tkinter.Label(self.game)
         self.game_info.config(font=config.FONT_HEADER, anchor="w")
-        self.game_info.grid(row=0, column=0, padx=5, pady=5, sticky="we")
+        self.game_info.grid(row=0, column=0, padx=4, sticky="we")
 
         self.game_clock = tkinter.Label(self.game)
         self.game_clock.config(font=config.FONT_HEADER, fg=config.WINDOW_CLOCK_COLOR)
-        if config.WINDOW_CLOCK: self.game_clock.grid(row=0, column=0, padx=5, pady=5, sticky="e")
+        if config.WINDOW_CLOCK: self.game_clock.grid(row=0, column=0, padx=2, sticky="e")
 
         self.game_board = tkinter.Canvas(self.game)
         self.game_board.config(
             width=config.CELL_SIZE*self.puzzle.width + config.CANVAS_SPARE,
             height=config.CELL_SIZE*self.puzzle.height + config.CANVAS_SPARE,
             highlightthickness=0)
-        self.game_board.grid(row=1, column=0, padx=5-config.CANVAS_OFFSET, pady=5, sticky="nwe")
+        self.game_board.grid(row=1, column=0, padx=5-config.CANVAS_OFFSET, sticky="nwe")
 
         self.game_menu = tkinter.Menu(self.game_board)
         self.game_menu.add_command(label="Check selected letter")
@@ -396,7 +392,7 @@ class Player:
         self.clues.rowconfigure(1, weight=1)
 
         self.across = tkinter.Frame(self.clues)
-        self.across.grid(row=0, column=0, padx=5, pady=5, sticky="ns")
+        self.across.grid(row=0, column=0, padx=5, pady=7, sticky="ns")
         self.across.rowconfigure(1, weight=1)
 
         self.across_label = tkinter.Label(self.across)
@@ -415,7 +411,7 @@ class Player:
         self.across_scrollbar.config(command=self.across_list.yview)
 
         self.down = tkinter.Frame(self.clues)
-        self.down.grid(row=1, column=0, padx=5, pady=5, sticky="ns")
+        self.down.grid(row=1, column=0, padx=5, pady=7, sticky="ns")
         self.down.rowconfigure(1, weight=1)
 
         self.down_label = tkinter.Label(self.down)
@@ -850,7 +846,7 @@ class Server:
 
     def __repr__(self):
         """Magic method for string representation."""
-        return "server (%s)" % self.address[0]
+        return "[%i] server (%s)" % (id(self), self.address[0])
 
     def bind(self):
         """Bind the server to the address provided at initialization. If it cannot bind it will quit."""
@@ -1045,6 +1041,7 @@ class Client(Player):
 
         while not self.ready: pass
         self.build_application()
+        self.window.title("Crossword on %s:%s" % self.address)
         self.window.after(100, self.update)
 
         logging.log(DEBUG, "%s update loop started", repr(self))
