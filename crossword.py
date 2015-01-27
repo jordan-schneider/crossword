@@ -304,6 +304,14 @@ class Board:
 MODIFIERS = {1: "Shift"}
 LETTERS = list(string.ascii_lowercase)
 
+def get_full_solution(puzzle):
+    """Return the full solution as a list with rebus entries."""
+    solution = list(puzzle.solution)
+    rebus = puzzle.rebus()
+    for index in rebus.get_rebus_squares():
+        solution[index] = rebus.solutions[rebus.table[index] - 1]
+    return solution
+
 def is_chat_string_allowed(string):
     print(string)
     for character in string:
@@ -903,6 +911,13 @@ class Server:
             if message["type"] == "game":
                 x, y = message["position"]
                 self.puzzle.fill[position_to_index(x, y, self.puzzle.width)] = message["letters"]
+
+                if LETTER not in self.puzzle.fill and not self.data["time-filled"]:
+                    self.send({"name": "Server", "color": "black", "type": "chat", "message": "Puzzle filled!"})
+                    self.data["time-fill"] = time.time()
+                if self.puzzle.fill == get_full_solution(self.puzzle) and not self.data["time-finished"]:
+                    self.send({"name": "Server", "color": "black", "type": "chat", "message": "Puzzle finished!"})
+                    self.data["time-finished"] = time.time()
             self.history.append(message)
             self.send(message)
 
