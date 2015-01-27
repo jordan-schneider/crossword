@@ -772,7 +772,8 @@ class Handler:
                 message = pickle.loads(data)
                 if message.get("type") == "stop":
                     self.stop()
-                self.server.messages.put((self, message))
+                else:
+                    self.server.messages.put((self, message))
             except Exception as e:
                 logging.log(ERROR, "%s receive loop error: %s", repr(self), e)
                 self.stop()
