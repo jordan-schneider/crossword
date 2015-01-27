@@ -51,7 +51,7 @@ class Config:
     FONT_FAMILY = "tkDefaultFont"
     FONT_SIZE_MODIFIER = 0
     FONT_COLOR = "black"
-    FILL_UNSELECTED = "white"
+    FILL_DESELECTED = "white"
     FILL_SELECTED_WORD = "light blue"
     FILL_SELECTED_LETTER = "yellow"
     FILL_EMPTY = "black"
@@ -72,7 +72,7 @@ class Config:
     CANVAS_OFFSET = 3
     CANVAS_SPARE = 2 + 2  # 2 for outline and 1 for spare right hand pixels
 
-    @property
+    @property  # These values are calculated on the fly
     def CANVAS_PAD_LETTER(self):
         return self.CELL_SIZE // 2 + 1
 
@@ -99,7 +99,7 @@ class Config:
     def FONT_CHAT(self):
         return self.FONT_FAMILY, 0
 
-    FILE_CONFIG = "config.txt" # Very meta (._.)
+    FILE_CONFIG = "config.txt"  # Very meta (._.)
 
     def __init__(self):
         """Magic method for initialization."""
@@ -210,7 +210,7 @@ class Board:
         self.current_cell = None
         self.current_word = None
 
-        for y in range(self.puzzle.height):
+        for y in range(self.puzzle.height):  # Fill the cells matrix with None as placeholders
             self.cells.append([])
             for x in range(self.puzzle.width):
                 self.cells[y].append(None)
@@ -252,23 +252,23 @@ class Board:
         origin = self[x, y]
         if direction == ACROSS: words = self.across_words
         else: words = self.down_words
-        if self.current_word:
-            self.current_word.update_options(fill=config.FILL_UNSELECTED)
-        for word in words:
-            if origin in word.cells:
+        if self.current_word:  # Deselect old word
+            self.current_word.update_options(fill=config.FILL_DESELECTED)
+        for word in words:  # Select new word
+            if origin in word.cells:  # Find the word
                 word.update_options(fill=config.FILL_SELECTED_WORD)
                 origin.update_options(fill=config.FILL_SELECTED_LETTER)
                 self.current_cell = origin
                 self.current_word = word
 
-    def set_unselected(self, x, y, direction):
-        """Set the word at the position of the origin letter (and of the direction) as unselected."""
+    def set_deselected(self, x, y, direction):
+        """Set the word at the position of the origin letter (and of the direction) as deselected."""
         origin = self[x, y]
         if direction == ACROSS: words = self.across_words
         else: words = self.down_words
         for word in words:
             if origin in word.cells:
-                word.update_options(fill=config.FILL_UNSELECTED)
+                word.update_options(fill=config.FILL_DESELECTED)
 
 
 # Application Classes
@@ -445,7 +445,7 @@ class Player:
             for x in range(self.puzzle.width):
                 cell = Cell(
                     self.game_board, self.puzzle.fill[y*self.puzzle.height + x], config.FONT_COLOR,
-                    config.FILL_UNSELECTED, config.CANVAS_OFFSET + x*config.CELL_SIZE,
+                    config.FILL_DESELECTED, config.CANVAS_OFFSET + x*config.CELL_SIZE,
                     config.CANVAS_OFFSET + y*config.CELL_SIZE, number=numbers.get(y*self.puzzle.height + x, ""))
                 self.board[x, y] = cell
                 cell.draw_to_canvas()
@@ -483,7 +483,7 @@ class Player:
                         next_cell_info = self.numbering.across[(cell_info_index + s) % len(self.numbering.across)]
                         next_cell_number = next_cell_info["cell"]
                         x, y = index_to_position(next_cell_number, self.puzzle.width)
-                        self.board.current_word.update_options(fill=config.FILL_UNSELECTED)
+                        self.board.current_word.update_options(fill=config.FILL_DESELECTED)
                         if s == -1: x += next_cell_info["len"] - 1
                         self.board.set_selected(x, y, self.direction)
                 else:
@@ -504,7 +504,7 @@ class Player:
                         next_cell_info = self.numbering.down[(cell_info_index + s) % len(self.numbering.down)]
                         next_cell_number = next_cell_info["cell"]
                         x, y = index_to_position(next_cell_number, self.puzzle.width)
-                        self.board.current_word.update_options(fill=config.FILL_UNSELECTED)
+                        self.board.current_word.update_options(fill=config.FILL_DESELECTED)
                         if s == -1: y += next_cell_info["len"] - 1
                         self.board.set_selected(x, y, self.direction)
                 else:
@@ -636,7 +636,7 @@ class Player:
         x = (event.x - config.CANVAS_OFFSET - 1) // config.CELL_SIZE
         y = (event.y - config.CANVAS_OFFSET - 1) // config.CELL_SIZE
         if not (0 <= x < self.puzzle.width and 0 <= y < self.puzzle.height): return
-        self.board.current_word.update_options(fill=config.FILL_UNSELECTED)
+        self.board.current_word.update_options(fill=config.FILL_DESELECTED)
         if self.board[x, y] == self.board.current_cell: self.direction = ["down", "across"][self.direction == "down"]
         self.board.set_selected(x, y, self.direction)
         self.window.event_generate("<<update-selected-clue>>")
@@ -656,7 +656,7 @@ class Player:
 
     def event_across_list_button_1(self, event):
         """On button-1 and key event for the across clue list."""
-        self.board.current_word.update_options(fill=config.FILL_UNSELECTED)
+        self.board.current_word.update_options(fill=config.FILL_DESELECTED)
         self.direction = "across"
         clue_number = self.across_list.nearest(event.y)
         cell_number = self.numbering.across[clue_number]["cell"]
@@ -665,7 +665,7 @@ class Player:
 
     def event_down_list_button_1(self, event):
         """On button-1 and key event for the down clue list."""
-        self.board.current_word.update_options(fill=config.FILL_UNSELECTED)
+        self.board.current_word.update_options(fill=config.FILL_DESELECTED)
         self.direction = "down"
         clue_number = self.across_list.nearest(event.y)
         cell_number = self.numbering.down[clue_number]["cell"]
