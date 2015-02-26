@@ -63,6 +63,7 @@ class Config:
     #ON_ENTER_KEY = "next word"  # ["next word"]
     #ON_TAB_KEY = "next word"  # ["next word"]
     ON_LAST_LETTER_GO_TO = "next word"  # ["next word", "first cell", "same cell"]
+    ON_FILLED_LETTER = "skip"  # ["skip", "stay"]
 
     WINDOW_TITLE = "NYTimes Crossword Puzzle"
     WINDOW_LINE_FILL = "grey70"
@@ -129,6 +130,10 @@ logging.log(DEBUG, "config namespace loaded")
 
 # Player Data Container
 PLAYER_DATA = {
+    # Referenced
+    "name": "",
+    "color": "",
+
     # Continuous
     "letters-lifetime": 0,
     "chat-entries": 0,
@@ -137,15 +142,14 @@ PLAYER_DATA = {
 
     # Calculated
     "letters-final": 0,
-    "letters-correct": 0,
-
 }
 
 SERVER_DATA = {
     # Referenced
+    "puzzle-author": "",
     "puzzle-width": 0,
     "puzzle-height": 0,
-    "puzzle-letters": 0,
+    "puzzle-cells": 0,
     "puzzle-words": 0,
 
     # Calculated
@@ -168,14 +172,14 @@ class Cell:
 
     def __init__(self, canvas, type, color, fill, x, y, letters="", number=""):
         """Magic method to initialize a new crossword cell."""
-        self.canvas = canvas # Tkinter Canvas from the main application
-        self.type = type # Letter or number
-        self.color = color # Letter color
-        self.fill = fill # Cell background fill
-        self.x = x # Top left x
-        self.y = y # Top left y
-        self.letters = letters # Letter or letters in the cell (rebus mode)
-        self.number = number # Cell number
+        self.canvas = canvas  # Tkinter Canvas from the main application
+        self.type = type  # Letter or number
+        self.color = color  # Letter color
+        self.fill = fill  # Cell background fill
+        self.x = x  # Top left x
+        self.y = y  # Top left y
+        self.letters = letters  # Letter or letters in the cell (rebus mode)
+        self.number = number  # Cell number
 
         self.rebus = len(self.letters)
         self.canvas_ids = [] # For efficiently tracking the drawings on the canvas
@@ -183,36 +187,34 @@ class Cell:
         if self.type == EMPTY:
             self.fill = config.FILL_EMPTY
         elif self.type != LETTER:
-            self.type = LETTER
+            self.type = LETTER  # There are only two types
 
     def draw_to_canvas(self):
         """Draw the cell, its fill, letter and color, and number to the canvas at the cell's position."""
         self.canvas.delete(*self.canvas_ids) # Clear all parts of the cell drawn on the canvas
         cell_position = (self.x, self.y, self.x+config.CELL_SIZE, self.y+config.CELL_SIZE)
-        cell_id = self.canvas.create_rectangle(*cell_position, fill=self.fill)
+        self.canvas.create_rectangle(*cell_position, fill=self.fill)
 
         if self.type == LETTER:
-            text_position = (self.x+config.CANVAS_PAD_LETTER, self.y+config.CANVAS_PAD_LETTER) # Find the center
+            text_position = (self.x+config.CANVAS_PAD_LETTER, self.y+config.CANVAS_PAD_LETTER)  # Find the center
             custom_font = (config.FONT_FAMILY, int(config.CELL_SIZE / (1.2 + 0.6*len(self.letters))))
-            # Devised the 1.2 + 0.6*len(...) based on observation
             letter_id = self.canvas.create_text(*text_position, text=self.letters, font=custom_font, fill=self.color)
             self.canvas_ids.append(letter_id)
 
             if self.number:
                 number_position = (self.x+config.CANVAS_PAD_NUMBER_LEFT, self.y+config.CANVAS_PAD_NUMBER_TOP)
-                custom_font = (config.FONT_FAMILY, int(config.CELL_SIZE / 3.5)) # Another arbitrary measurement
+                custom_font = (config.FONT_FAMILY, int(config.CELL_SIZE / 3.5))
                 number_id = self.canvas.create_text(*number_position, text=self.number, font=custom_font, anchor="w")
                 self.canvas_ids.append(number_id)
 
     def update_options(self, **options):
         """Update cell attributes and redraw it to the canvas."""
-        self.__dict__.update(options)
+        self.__dict__.update(options)  # Vulnerable
         self.rebus = len(self.letters)
         self.draw_to_canvas()
 
 class Word:
-    """Container class for a crossword word that holds cell and puzzle info references. This is a convenience class.
-    Some of it is a bit sloppy as well and the general algorithm should be reconsidered eventually."""
+    """Container class for a crossword word that holds cell and puzzle info references."""
 
     def __init__(self, cells, info, solution):
         """Initialize a new crossword word with its corresponding letter cells puzzle info."""
@@ -243,6 +245,8 @@ class Board:
             self.cells.append([])
             for x in range(self.puzzle.width):
                 self.cells[y].append(None)
+
+        self.paused = True
 
     def __repr__(self):
         """Magic method for string representation."""
@@ -320,7 +324,7 @@ def is_chat_string_allowed(string):
     return True
 
 class Player:
-    """The bare client crossword player. Handles nothing except for the crossword board."""
+    """The client crossword player application. Handles nothing except for the crossword board."""
 
     def __init__(self, name, color):
         """Magic method to initialize a new crossword player."""
@@ -438,7 +442,7 @@ class Player:
         self.chat_text.grid(row=0, column=0, padx=5, pady=5, sticky="NS")
 
         self.chat_entry = tkinter.Entry(self.chat_frame)
-        self.chat_entry.config(font=config.FONT_CHAT, validatecommand=(is_chat_string_allowed, "%S"))  # Not working
+        self.chat_entry.config(font=config.FONT_CHAT, state="disabled")  # Not working
         self.chat_entry.grid(row=1, column=0, padx=6, pady=5, sticky="EW")
 
         logging.log(DEBUG, "%s created application widgets", repr(self))
@@ -459,6 +463,7 @@ class Player:
 
         self.window.bind_all("<<event-tab-key-override>>", self.event_tab_key_override)
         self.window.bind_all("<<event-shift-tab-key-override>>", self.event_shift_tab_key_override)
+        self.window.bind_all("<Escape>", self.event_escape_key)
 
         self.window.protocol('WM_DELETE_WINDOW', self.stop)
 
@@ -468,6 +473,19 @@ class Player:
             config.CANVAS_OFFSET, config.CANVAS_OFFSET,
             config.CELL_SIZE*self.puzzle.width + config.CANVAS_OFFSET,
             config.CELL_SIZE*self.puzzle.height + config.CANVAS_OFFSET)
+
+        x = int(self.game_board.cget("width")) // 2
+        y = int(self.game_board.cget("height")) // 2
+        self.game_board.create_text(x, y, text="Press 'esc' to start", font=config.FONT_HEADER)
+
+        self.paused = True
+        self.pause_state = {}
+        logging.log(DEBUG, "%s built the application", repr(self))
+
+    def play(self):
+        self.paused = False
+
+        self.game_board.delete("all")
 
         numbers = {w["cell"]: w["num"] for w in self.numbering.across}
         numbers.update({w["cell"]: w["num"] for w in self.numbering.down})
@@ -488,18 +506,56 @@ class Player:
         self.across_list.selection_set(0)
         logging.log(DEBUG, "%s populated clue lists", repr(self))
 
-        self.direction = "across"
-        self.board.set_selected(0, 0, self.direction)
-        logging.log(DEBUG, "%s built the application", repr(self))
+        if self.pause_state.get("time"): self.epoch += time.time() - self.pause_state["time"]
+        else: self.epoch += time.time() - self.epoch  # Just starting game
 
-    def move_current_selection(self, direction, distance, force_next_word=False):
+        self.window.event_generate("<<update-game-info>>")
+        self.window.event_generate("<<update-clock>>")
+        logging.log(DEBUG, "%s triggered update events", repr(self))
+
+        self.chat_entry.config(state="normal")
+        if self.pause_state.get("chat"):
+            self.chat_text.config(state="normal")
+            self.chat_text.insert("1.0", self.pause_state["chat"])
+        logging.log(DEBUG, "%s enabled chat", repr(self))
+
+        self.direction = "across"
+        x = self.pause_state.get("x") or 0
+        y = self.pause_state.get("y") or 0
+        self.board.set_selected(x, y, self.direction)
+
+    def pause(self):
+        """Pause the entire game."""
+        self.game_board.delete("all")
+        x = int(self.game_board.cget("width")) // 2
+        y = int(self.game_board.cget("height")) // 2
+        self.game_board.create_text(x, y, text="Paused", font=config.FONT_HEADER)
+
+        self.chat_text.config(state="normal")
+        chat = self.chat_text.get("1.0", "end-1c")  # Newline
+        x, y = self.board.index(self.board.current_cell)
+        self.pause_state["time"] = time.time()
+        self.pause_state["chat"] = chat
+        self.pause_state["x"] = x
+        self.pause_state["y"] = y
+
+        self.chat_text.delete("1.0", "end")
+        self.chat_text.config(state="disabled")
+        self.chat_entry.config(state="disabled")
+        self.across_list.delete("0", "end")
+        self.down_list.delete("0", "end")
+
+        self.paused = True
+
+    def move_current_selection(self, direction, distance, force_next_word=False, allow_skip=True):
         """Move the current selection by the distance in the specified direction."""
         x, y = self.board.index(self.board.current_cell)
         s = -1 if distance < 0 else 1
         self.board.set_selected(x, y, direction)
         self.direction = direction
         if direction == ACROSS:
-            for i in range(0, distance, s):
+            i = 0
+            while i != distance:  # A lot of trust here
                 if x + s >= self.puzzle.width or x + s < 0: at_word_end = True
                 elif self.board[x+s, y] not in self.board.current_word.cells: at_word_end = True
                 else: at_word_end = False
@@ -518,9 +574,13 @@ class Player:
                         self.board.set_selected(x, y, self.direction)
                 else:
                     x += s
+                if config.ON_FILLED_LETTER == "skip" and allow_skip and self.board[x, y].letters:
+                    distance += s
+                i += s
             self.board.set_selected(x, y, self.direction)
         elif direction == DOWN:
-            for i in range(0, distance, s):
+            i = 0
+            while i != distance:  # Again
                 if y + s >= self.puzzle.height or y + s < 0: at_word_end = True
                 elif self.board[x, y+s] not in self.board.current_word.cells: at_word_end = True
                 else: at_word_end = False
@@ -539,6 +599,9 @@ class Player:
                         self.board.set_selected(x, y, self.direction)
                 else:
                     y += s
+                if config.ON_FILLED_LETTER == "skip" and allow_skip and self.board[x, y].letters:
+                    distance += s
+                i += s
             self.board.set_selected(x, y, self.direction)
 
     def get_selected_clue(self):
@@ -571,6 +634,7 @@ class Player:
 
     def event_update_game_info(self, event):
         """Update the current game info."""
+        if self.paused: return
         if self.get_selected_clue() is None:
             self.window.event_generate("<<update-selected-clue>>")
         clue = self.get_selected_clue().copy()
@@ -580,6 +644,7 @@ class Player:
 
     def event_update_clock(self, event):
         """Update the game time."""
+        if self.paused: return
         seconds = time.time() - self.epoch
         clock_time = str(datetime.timedelta(seconds=int(seconds)))
         self.game_clock.config(text=clock_time)
@@ -588,22 +653,26 @@ class Player:
     def event_tab_key(self, event):
         """Special tab key event in order to prevent tkinter from cycling through widgets. Has to return break quickly
         or else tkinter will do its own thing."""
+        if self.paused: return
         self.window.event_generate("<<event-tab-key-override>>")
         return "break"
 
     def event_shift_tab_key(self, event):
         """Special shift tab key event in order to prevent tkinter from cycling through widgets. Has to return break
         quickly or else tkinter will do its own thing."""
+        if self.paused: return
         self.window.event_generate("<<event-shift-tab-key-override>>")
         return "break"
 
     def event_tab_key_override(self, event):
         """Special call for tab."""
+        if self.paused: return
         distance = len(self.board.current_word.cells) - self.board.current_word.cells.index(self.board.current_cell)
         self.move_current_selection(self.direction, distance, force_next_word=True)
 
     def event_shift_tab_key_override(self, event):
         """Special call for shift tab."""
+        if self.paused: return
         numbering = self.numbering.across if self.direction == ACROSS else self.numbering.down
         last_word_info = numbering[numbering.index(self.board.current_word.info) - 1]
         length = last_word_info["len"]
@@ -611,11 +680,12 @@ class Player:
         self.move_current_selection(self.direction, -distance, force_next_word=True)
 
     def event_key(self, event):
-        """Key event for the entire crossword player since canvas widgets have no active state. To add rebus characters
+        """Key event for the entire crossword player since canvas widgets have no active state. To add rebus characters,
         the shift key is used."""
+        if self.paused: return
+
         modifier = MODIFIERS.get(event.state)
         keysym = event.keysym
-
         if not self.has_focus(self.chat_entry):
             # Letters
             if keysym.lower() in LETTERS and event.char is not "":
@@ -627,10 +697,10 @@ class Player:
                 if modifier == "Shift": letters = self.board.current_cell.letters[:-1]
                 else: letters = ""
                 self.write_cell(self.board.current_cell, letters)
-                if modifier != "Shift": self.move_current_selection(self.direction, -1)
+                if modifier != "Shift": self.move_current_selection(self.direction, -1, allow_skip=False)
             elif keysym == "space":
                 if config.ON_SPACE_KEY == "change direction":
-                    self.direction = [ACROSS, DOWN][[DOWN, ACROSS].index(self.direction)]
+                    self.direction = ACROSS if self.direction == DOWN else DOWN
                     self.move_current_selection(self.direction, 0)
                 else:
                     self.write_cell(self.board.current_cell, " ")
@@ -643,22 +713,22 @@ class Player:
                 if self.direction != ACROSS:
                     self.direction = ACROSS
                 elif config.ON_DOUBLE_ARROW_KEY != "stay in cell":
-                    self.move_current_selection(ACROSS, -1, force_next_word=True)
+                    self.move_current_selection(ACROSS, -1, force_next_word=True, allow_skip=False)
             elif keysym == "Right":
                 if self.direction != ACROSS:
                     self.direction = ACROSS
                 elif config.ON_DOUBLE_ARROW_KEY != "stay in cell":
-                    self.move_current_selection(ACROSS, 1, force_next_word=True)
+                    self.move_current_selection(ACROSS, 1, force_next_word=True, allow_skip=False)
             elif keysym == "Up":
                 if self.direction != DOWN:
                     self.direction = DOWN
                 elif config.ON_DOUBLE_ARROW_KEY != "stay in cell":
-                    self.move_current_selection(DOWN, -1, force_next_word=True)
+                    self.move_current_selection(DOWN, -1, force_next_word=True, allow_skip=False)
             elif keysym == "Down":
                 if self.direction != DOWN:
                     self.direction = DOWN
                 elif config.ON_DOUBLE_ARROW_KEY != "stay in cell":
-                    self.move_current_selection(DOWN, 1, force_next_word=True)
+                    self.move_current_selection(DOWN, 1, force_next_word=True, allow_skip=False)
 
             self.move_current_selection(self.direction, 0)
 
@@ -666,6 +736,7 @@ class Player:
 
     def event_game_board_button_1(self, event):
         """On button-1 event for the canvas."""
+        if self.paused: return
         if self.has_focus(self.chat_entry):
             self.game_board.focus_set()
             return
@@ -680,6 +751,7 @@ class Player:
 
     def event_game_board_button_2(self, event):
         """On button-2 event for the canvas."""
+        if self.paused: return
         if self.has_focus(self.chat_entry):
             self.game_board.focus_set()
             return
@@ -692,6 +764,7 @@ class Player:
 
     def event_across_list_button_1(self, event):
         """On button-1 and key event for the across clue list."""
+        if self.paused: return
         self.board.current_word.update_options(fill=config.FILL_DESELECTED)
         self.direction = "across"
         clue_number = self.across_list.nearest(event.y)
@@ -701,6 +774,7 @@ class Player:
 
     def event_down_list_button_1(self, event):
         """On button-1 and key event for the down clue list."""
+        if self.paused: return
         self.board.current_word.update_options(fill=config.FILL_DESELECTED)
         self.direction = "down"
         clue_number = self.across_list.nearest(event.y)
@@ -710,6 +784,7 @@ class Player:
 
     def event_chat_entry_return(self, event):
         """On event for when the user presses enter in the chat entry. This is just a filler."""
+        if self.paused: return
         self.chat_text.config(state="normal")
 
         start = self.chat_text.index("end")+"-1l"  # Not sure why
@@ -722,12 +797,17 @@ class Player:
         self.chat_text.config(state="disabled")
         self.chat_entry.delete(0, "end")
 
+    def event_escape_key(self, event):
+        """On event for when the user presses the escape key. Handles pausing and playing."""
+        if self.paused: self.play()
+        else: self.pause()
+
+        logging.log(DEBUG, "%s is now %s", repr(self), self.paused and "paused" or "unpaused")
+
     def run_application(self):
         """Run the application."""
         logging.log(INFO, "%s application running", repr(self))
         self.epoch = time.time()
-        self.window.event_generate("<<update-game-info>>")
-        self.window.event_generate("<<update-clock>>")
         self.game_board.focus_set()
         self.window.mainloop()
 
@@ -779,6 +859,7 @@ class Handler:
         self.socket = sock
         self.address = address
         self.server = server
+        self.data = PLAYER_DATA.copy()
 
         self.active = True
         logging.log(INFO, "%s initialized", repr(self))
@@ -823,7 +904,7 @@ class Handler:
 class Server:
     """A simple server for hosting a local network multiplayer crossword game."""
 
-    def __init__(self, address):
+    def __init__(self, address, puzzle):
         """Magic method to initialize a new server."""
         self.address = address
 
@@ -831,11 +912,18 @@ class Server:
         self.handlers = []
         self.epoch = time.time()
         self.history = []
+        self.ownership = {}
         self.active = True
         self.data = SERVER_DATA.copy()
 
-        self.puzzle = puz.read("puzzles/Nov0705.puz")  # For testing                                          # puz.read
+        self.puzzle = puz.read(puzzle)  # For testing                                          # puz.read
         self.puzzle.fill = list(self.puzzle.fill)
+        self.puzzle.file = puzzle
+        self.data["puzzle-author"] = self.puzzle.author
+        self.data["puzzle-width"] = self.puzzle.width
+        self.data["puzzle-height"] = self.puzzle.height
+        self.data["puzzle-cells"] = self.puzzle.fill.count(LETTER)
+        self.data["puzzle-words"] = len("".join(self.puzzle.fill).split(EMPTY))
 
         self.numbering = self.puzzle.clue_numbering()
         for clue in self.numbering.across: clue.update({"dir": ACROSS})
@@ -900,6 +988,8 @@ class Server:
         if message["type"] == "info":  # Special client message to send information
             handler.color = message["color"]
             handler.name = message["name"]
+            handler.data["name"] = handler.name
+            handler.data["color"] = handler.color
             self.send({"name": "Server", "color": "black", "type": "chat", "message": "%s joined\n" % handler.name})
         else:
             message["color"] = handler.color
@@ -907,13 +997,26 @@ class Server:
             if message["type"] == "game":
                 x, y = message["position"]
                 self.puzzle.fill[position_to_index(x, y, self.puzzle.width)] = message["letters"]
-
+                handler.data["letters-lifetime"] += len(message["letters"])
+                self.ownership[position_to_index(x, y, self.puzzle.width)] = handler.name
                 if LETTER not in self.puzzle.fill and not self.data["time-filled"]:
                     self.send({"name": "Server", "color": "black", "type": "chat", "message": "Puzzle filled!"})
                     self.data["time-fill"] = time.time()
                 if self.puzzle.fill == get_full_solution(self.puzzle) and not self.data["time-finished"]:
                     self.send({"name": "Server", "color": "black", "type": "chat", "message": "Puzzle finished!"})
                     self.data["time-finished"] = time.time()
+
+                    summary = [self.data]
+                    for handler in self.handlers:
+                        handler.data["letters-final"] = list(self.ownership.values()).count(handler.name)
+                        summary.append(handler.data)
+
+                    self.send({"type": "summary", "message": summary})
+
+            if message["type"] == "chat":
+                handler.data["chat-entries"] += 1
+                handler.data["chat-words"] += len(message["message"].split())
+                handler.data["chat-letters"] += len(message["message"])
             self.history.append(message)
             self.send(message)
 
@@ -951,7 +1054,6 @@ class Client(Player):
         self.color = color
         self.messages = queue.Queue()
         self.active = True
-        self.data = PLAYER_DATA.copy()
         logging.log(DEBUG, "%s initialized", repr(self))
 
     def __repr__(self):
@@ -1029,6 +1131,11 @@ class Client(Player):
                 self.chat_text.tag_add(message["name"], start, end)
                 self.chat_text.see("end")
                 self.chat_text.config(state="disabled")
+            elif message["type"] == "summary":
+                summary = message["message"]
+                with open(self.puzzle.file[:-4] + ".txt", "w") as file:
+                    output = ""
+                    output += "\n".join([str(key) + ": " + str(value) for key, value in list(summary[0].items())])
         self.window.after(100, self.update)
 
     def start(self):
@@ -1059,20 +1166,25 @@ class Client(Player):
         logging.log(DEBUG, "%s socket closed", repr(self))
         logging.log(DEBUG, "%s stopped", repr(self))
 
+class Menu:
+    """Start menu for the crossword program."""
 
-if len(sys.argv) == 1:
-    logging.log(ERROR, "no arguments supplied on execution")
-elif sys.argv[1] == "server":
-    server = Server((sys.argv[2], int(sys.argv[3])))
-    server.start()
-elif sys.argv[1] == "client":
-    client = Client((sys.argv[2], int(sys.argv[3])), sys.argv[4], sys.argv[5])
-    client.start()
-elif sys.argv[1] == "test":
+    def __init__(self):
+        """Magic method for initialization of the menu."""
+        pass
+
+    def build(self):
+        """Build the graphical part of the menu."""
+        pass
+
+if len(sys.argv) > 1:
+    if sys.argv[1] == "server":
+        server = Server((sys.argv[2], int(sys.argv[3])), sys.argv[4])
+        server.start()
+    elif sys.argv[1] == "client":
+        client = Client((sys.argv[2], int(sys.argv[3])), sys.argv[4], sys.argv[5])
+        client.start()
+else:
     player = Player("Noah", "black")
     player.load_puzzle("puzzles/Nov0705.puz")
     player.start()
-else:
-    logging.log(ERROR, "invalid argument '%s'", sys.argv[1])
-
-
