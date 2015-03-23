@@ -482,24 +482,24 @@ class Player:
         self.pause_state = {}
         logging.log(DEBUG, "%s built the application", repr(self))
 
-    def play(self):
+    def play(self, reset=True):
         self.paused = False
-
         self.game_board.delete("all")
 
-        numbers = {w["cell"]: w["num"] for w in self.numbering.across}
-        numbers.update({w["cell"]: w["num"] for w in self.numbering.down})
-        for y in range(self.puzzle.height):
-            for x in range(self.puzzle.width):
-                cell = Cell(
-                    self.game_board, self.puzzle.fill[position_to_index(x, y, self.puzzle.width)], config.FONT_COLOR,
-                    config.FILL_DESELECTED, config.CANVAS_OFFSET + x*config.CELL_SIZE,
-                    config.CANVAS_OFFSET + y*config.CELL_SIZE, number=numbers.get(y*self.puzzle.height + x, ""))
-                self.board[x, y] = cell
-                cell.draw_to_canvas()
-        self.board.generate_words()
-        logging.log(DEBUG, "%s populated crossword cells", repr(self))
-        logging.log(DEBUG, "%s drew crossword puzzle", repr(self))
+        if reset:
+            numbers = {w["cell"]: w["num"] for w in self.numbering.across}
+            numbers.update({w["cell"]: w["num"] for w in self.numbering.down})
+            for y in range(self.puzzle.height):
+                for x in range(self.puzzle.width):
+                    cell = Cell(
+                        self.game_board, self.puzzle.fill[position_to_index(x, y, self.puzzle.width)],
+                        config.FONT_COLOR, config.FILL_DESELECTED, config.CANVAS_OFFSET + x*config.CELL_SIZE,
+                        config.CANVAS_OFFSET + y*config.CELL_SIZE, number=numbers.get(y*self.puzzle.height + x, ""))
+                    self.board[x, y] = cell
+                    cell.draw_to_canvas()
+            self.board.generate_words()
+            logging.log(DEBUG, "%s populated crossword cells", repr(self))
+            logging.log(DEBUG, "%s drew crossword puzzle", repr(self))
 
         for info in self.numbering.across: self.across_list.insert("end", " %(num)i. %(clue)s" % info)
         for info in self.numbering.down: self.down_list.insert("end", " %(num)i. %(clue)s" % info)
@@ -799,7 +799,8 @@ class Player:
 
     def event_escape_key(self, event):
         """On event for when the user presses the escape key. Handles pausing and playing."""
-        if self.paused: self.play()
+
+        if self.paused: self.play(new=False)
         else: self.pause()
 
         logging.log(DEBUG, "%s is now %s", repr(self), self.paused and "paused" or "unpaused")
