@@ -209,7 +209,7 @@ class Cell:
 
     def update_options(self, **options):
         """Update cell attributes and redraw it to the canvas."""
-        self.__dict__.update(options)  # Vulnerable
+        self.__dict__.update(options)  # Vulnerable but it hardly matters
         self.rebus = len(self.letters)
         self.draw_to_canvas()
 
