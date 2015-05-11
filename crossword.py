@@ -224,7 +224,7 @@ class Word:
 
     def update_options(self, **options):
         """Update the options of every cell in the word. This is simply a parent convenience method."""
-        for cell in self.cells: cell.update_options(**options)
+        for cell in self.cells: cell.update(**options)
 
 class Board:
     """Container class for an entire crossword board. Essentially serves as a second layer on top of the puzzle class.
@@ -286,11 +286,11 @@ class Board:
         if direction == ACROSS: words = self.across_words
         else: words = self.down_words
         if self.current_word:  # Deselect old word
-            self.current_word.update_options(fill=config.FILL_DESELECTED)
+            self.current_word.update(fill=config.FILL_DESELECTED)
         for word in words:  # Select new word
             if origin in word.cells:  # Find the word
-                word.update_options(fill=config.FILL_SELECTED_WORD)
-                origin.update_options(fill=config.FILL_SELECTED_LETTER)
+                word.update(fill=config.FILL_SELECTED_WORD)
+                origin.update(fill=config.FILL_SELECTED_LETTER)
                 self.current_cell = origin
                 self.current_word = word
 
@@ -301,7 +301,7 @@ class Board:
         else: words = self.down_words
         for word in words:
             if origin in word.cells:
-                word.update_options(fill=config.FILL_DESELECTED)
+                word.update(fill=config.FILL_DESELECTED)
 
 
 # Application Classes
@@ -618,7 +618,7 @@ class Player:
     def write_cell(self, cell, letters):
         """External method for inserting letters into cells. Needs to be here so that the multiplayer version can
         overwrite and use this to send data to the server."""
-        cell.update_options(letters=letters, color=self.color)
+        cell.update(letters=letters, color=self.color)
 
     def event_update_selected_clue(self, event):
         """Update the selected clue."""
@@ -1117,7 +1117,7 @@ class Client(Player):
                 self.stop()
             elif message["type"] == "game":
                 x, y = message["position"]
-                self.board[x, y].update_options(color=message["color"], letters=message["letters"])
+                self.board[x, y].update(color=message["color"], letters=message["letters"])
             elif message["type"] == "chat":
                 self.chat_text.config(state="normal")
                 start = self.chat_text.index("end")+"-1l"  # Not sure why

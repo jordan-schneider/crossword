@@ -99,7 +99,7 @@ class CrosswordCell:
         if self.type == EMPTY: self.fill = config["board"]["empty-fill"]
         elif self.type != LETTER: self.type = LETTER  # There are only two types
 
-    def draw_to_canvas(self):
+    def draw(self):
         """Draw the cell, its fill, letter and color, and number to the canvas at the cell's position."""
         self.canvas.delete(*self.canvas_ids) # Clear all parts of the cell drawn on the canvas
         cell_position = (self.x, self.y, self.x+config["board"]["cell-size"],
@@ -118,11 +118,11 @@ class CrosswordCell:
                 number_id = self.canvas.create_text(*number_position, text=self.number, font=custom_font, anchor="w")
                 self.canvas_ids.append(number_id)
 
-    def update_options(self, **options):
+    def update(self, **options):
         """Update cell attributes and redraw it to the canvas."""
         self.__dict__.update(options)  # Vulnerable
         self.rebus = len(self.letters)
-        self.draw_to_canvas()
+        self.draw()
 
 class CrosswordWord:
     """Container class for a crossword word that holds cell and puzzle info references."""
@@ -133,10 +133,10 @@ class CrosswordWord:
         self.info = info
         self.solution = solution
 
-    def update_options(self, **options):
+    def update(self, **options):
         """Update the options of every cell in the word. This is simply a parent convenience method."""
         for cell in self.cells:
-            cell.update_options(**options)
+            cell.update(**options)
 
 class CrosswordBoard:
     """Container class for an entire crossword board. Essentially serves as a second layer on top of the puzzle class.
@@ -171,10 +171,6 @@ class CrosswordBoard:
         """Magic method for coordinate based index getting."""
         return self.cells[position[1]][position[0]]
 
-    def index(self, cell):
-        """Get the coordinates of a cell if it exists in the crossword board."""
-        return index_to_position(sum(self.cells, []).index(cell), self.puzzle.width)
-
     def generate_words(self):
         """Generates all of the words for the crossword board and puts them in two lists."""
         for info in self.puzzle.numbering.across:
@@ -191,17 +187,21 @@ class CrosswordBoard:
             self.down_words.append(CrosswordWord(cells, info, solution))
         logging.log(DEBUG, "%s crossword words generated", repr(self))
 
+    def index(self, cell):
+        """Get the coordinates of a cell if it exists in the crossword board."""
+        return index_to_position(sum(self.cells, []).index(cell), self.puzzle.width)
+
     def set_selected(self, x, y, direction):
         """Set the word at the position of the origin letter (and of the direction) as selected."""
         origin = self[x, y]
         if direction == ACROSS: words = self.across_words
         else: words = self.down_words
         if self.current_word:  # Deselect old word
-            self.current_word.update_options(fill=config.FILL_DESELECTED)
+            self.current_word.update(fill=config.FILL_DESELECTED)
         for word in words:  # Select new word
             if origin in word.cells:  # Find the word
-                word.update_options(fill=config.FILL_SELECTED_WORD)
-                origin.update_options(fill=config.FILL_SELECTED_LETTER)
+                word.update(fill=config.FILL_SELECTED_WORD)
+                origin.update(fill=config.FILL_SELECTED_LETTER)
                 self.current_cell = origin
                 self.current_word = word
 
@@ -212,7 +212,7 @@ class CrosswordBoard:
         else: words = self.down_words
         for word in words:
             if origin in word.cells:
-                word.update_options(fill=config.FILL_DESELECTED)
+                word.update(fill=config.FILL_DESELECTED)
 
 # Crossword utilities
 def get_full_solution(puzzle):
@@ -395,7 +395,7 @@ class CrosswordPlayer:
                     "black", config["board"]["deselected-fill"], CANVAS_OFFSET + x*config["board"]["cell-size"],
                     CANVAS_OFFSET + y*config["board"]["cell-size"], number=numbers.get(y*self.puzzle.height + x, ""))
                 self.board[x, y] = cell
-                cell.draw_to_canvas()
+                cell.draw()
         self.board.generate_words()
         logging.log(DEBUG, "%s populated crossword cells", repr(self))
         logging.log(DEBUG, "%s drew crossword puzzle", repr(self))
