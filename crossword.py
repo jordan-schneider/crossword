@@ -817,11 +817,6 @@ class Player:
         self.window.quit()
         self.window.destroy()
 
-    def start(self):
-        """Convenience function to setup and run the player."""
-        self.build_application()
-        self.run_application()
-
     def stop(self):
         """Stop the player."""
         self.destroy_application()
