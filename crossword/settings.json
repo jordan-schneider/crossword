@@ -1,0 +1,83 @@
+{
+  "board": {
+    "cell-size": 33,
+    "fill": {
+      "correct": "green",
+      "default": "white",
+      "empty": "black",
+      "incorrect": "red",
+      "selected": "light blue",
+      "selected-letter": "yellow"
+    }
+  },
+  "controls": {
+    "on-double-arrow-key": [
+      "move in direction",
+      "stay in cell"
+    ],
+    "on-enter-key": [
+      "next word"
+    ],
+    "on-filled-letter": [
+      "skip",
+      "stay"
+    ],
+    "on-last-letter-go-to": [
+      "next word",
+      "first cell",
+      "same cell"
+    ],
+    "on-space-key": [
+      "clear and skip",
+      "change direction"
+    ],
+    "on-tab-key": [
+      "next word"
+    ]
+  },
+  "style": {
+    "time": {
+      "fg": "grey70",
+      "font": [
+        "tkDefaultFont",
+        15
+      ]
+    },
+    "font": {
+      "size-modifier": 0
+    },
+    "header": {
+      "fg": "black",
+      "font": [
+        "tkDefaultFont",
+        20
+      ]
+    },
+    "label": {
+      "fg": "black",
+      "font": [
+        "tkDefaultFont",
+        15
+      ]
+    },
+    "line": {
+      "fill": "grey60"
+    },
+    "list": {
+      "fg": "black",
+      "selectbackground": "light blue",
+      "width": 35,
+      "font": [
+        "tkDefaultFont",
+        10
+      ]
+    },
+    "title": {
+      "fg": "black",
+      "font": [
+        "tkDefaultFont",
+        25
+      ]
+    }
+  }
+}
