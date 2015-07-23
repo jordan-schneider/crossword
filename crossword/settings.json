@@ -40,17 +40,24 @@
       "fg": "grey70",
       "font": [
         "tkDefaultFont",
-        15
+        20
+      ]
+    },
+    "clue": {
+      "fg": "black",
+      "font": [
+        "tkDefaultFont",
+        20
       ]
     },
     "font": {
       "size-modifier": 0
     },
-    "header": {
+    "author": {
       "fg": "black",
       "font": [
         "tkDefaultFont",
-        20
+        25
       ]
     },
     "label": {
