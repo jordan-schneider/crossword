@@ -32,23 +32,19 @@ class View:
         self.frame.pack(fill="both", padx=PAD, pady=PAD)
         # Initialize widget groups
         self.header = HeaderView(self.root, self.frame)
-        self.crossword = CrosswordView(self.root, self.frame)
+        self.puzzle = PuzzleView(self.root, self.frame)
         self.clues = CluesView(self.root, self.frame)
         # Show widgets
         self.header.show()
-        self.crossword.show()
+        self.puzzle.show()
         self.clues.show()
-
-    def setup(self):
-        """Set graphical options to their defaults and bind events."""
-        self.header.title.set("Hello, world!")
-        self.header.author.set("Noah Kim")
-        self.crossword.clue.set("This is a clue")
-        self.crossword.time.set("00:00:00")
 
     def main(self):
         """Run the main loop of the view."""
-        self.setup()
+        self.header.title.set("Hello, world!")
+        self.header.author.set("Noah Kim")
+        self.puzzle.clue.set("This is a clue")
+        self.puzzle.time.set("00:00:00")
         self.root.mainloop()
 
     def stop(self):
@@ -125,8 +121,8 @@ class HeaderView(GroupView):
         self.visible = True
 
 
-class CrosswordView(GroupView):
-    """The crossword group of the crossword application."""
+class PuzzleView(GroupView):
+    """The puzzle group of the crossword application."""
 
     def __init__(self, root, parent):
         """Build the crossword widget group."""

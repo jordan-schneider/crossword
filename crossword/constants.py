@@ -21,7 +21,7 @@ __status__ = "Development"
 ROOT_DIRECTORY = os.path.abspath(os.path.dirname(__file__))
 SETTINGS_PATH = os.path.join(ROOT_DIRECTORY, "settings.json")
 
-# Application
+# Padding
 FULL_PAD = 10
 HALF_PAD = FULL_PAD // 2
 TINY_PAD = HALF_PAD // 2
@@ -29,10 +29,27 @@ PAD = HALF_PAD
 CANVAS_SPARE = 2 + 2
 CANVAS_PAD = 3
 
-# Header group
+# Header view
 SEPARATOR_HEIGHT = 1
 SEPARATOR_COLOR = "black"
 
-# Puzzle
+# Crossword view
 DEFAULT_PUZZLE_WIDTH = 15
 DEFAULT_PUZZLE_HEIGHT = 15
+
+# Cell model
+NUMBER_LEFT = 6
+NUMBER_TOP = 3
+
+# Puzzle
+LETTER = "-"
+EMPTY = "."
+DOWN = "down"
+ACROSS = "across"
+
+# Network
+SERVER = "server"
+CLIENT = "client"
+PLAYER = "player"
+SPECTATOR = "spectator"
+
