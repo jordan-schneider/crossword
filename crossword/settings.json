@@ -37,7 +37,7 @@
   },
   "style": {
     "time": {
-      "fg": "grey70",
+      "fg": "black",
       "font": [
         "tkDefaultFont",
         20
@@ -67,8 +67,8 @@
         15
       ]
     },
-    "line": {
-      "fill": "grey60"
+    "border": {
+      "fill": "black"
     },
     "list": {
       "fg": "black",

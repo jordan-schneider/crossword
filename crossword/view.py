@@ -61,22 +61,23 @@ class ViewHeader:
         self.root = root
         self.parent = parent
         # Padding frame
-        self.frame = tk.Frame(self.parent, bg="red")
+        self.frame = tk.Frame(self.parent)
         self.frame.grid(row=0, column=0, columnspan=4, padx=PAD, pady=PAD, sticky=tk.W+tk.E)
+        self.frame.columnconfigure(0, weight=1)
         # Title of the crossword puzzle
         self.title = tk.StringVar(self.root)
         self.title_label = tk.Label(self.frame, textvariable=self.title)
         self.title_label.config(**settings.get("style:title"))
-        self.title_label.grid(row=0, column=0, sticky=tk.W)
+        self.title_label.grid(row=0, column=0, padx=EXTRA_PAD, pady=(0, PAD), sticky=tk.W)
         # Author of the crossword puzzle
         self.author = tk.StringVar(self.root)
         self.author_label = tk.Label(self.frame, textvariable=self.author)
         self.author_label.config(**settings.get("style:author"))
-        self.author_label.grid(row=0, column=0, sticky=tk.E)
+        self.author_label.grid(row=0, column=0, padx=EXTRA_PAD, pady=(0, PAD), sticky=tk.E)
         # Dividing line separating the header and the rest of the application
         self.separator = tk.Frame(self.frame)
         self.separator.config(height=SEPARATOR_HEIGHT, bg=SEPARATOR_COLOR)
-        self.separator.grid(row=1, sticky=tk.W+tk.E)
+        self.separator.grid(row=1, padx=EXTRA_PAD, sticky=tk.W+tk.E)
 
 
 class ViewCrossword:
@@ -88,23 +89,25 @@ class ViewCrossword:
         self.parent = parent
         # Padding frame
         self.frame = tk.Frame(self.parent)
-        self.frame.grid(row=1, column=0, padx=PAD, pady=PAD)
+        self.frame.grid(row=1, column=0, padx=PAD, pady=0)
         # Crossword clue
         self.clue = tk.StringVar(self.root)
-        self.clue_label = tk.Label(self.frame, textvariable=self.clue, bg="red")
+        self.clue_label = tk.Label(self.frame, textvariable=self.clue)
         self.clue_label.config(**settings.get("style:clue"))
-        self.clue_label.grid(row=0, sticky=tk.W)
+        self.clue_label.grid(row=0, padx=EXTRA_PAD, sticky=tk.W)
         # Game timer
         self.time = tk.StringVar(self.root)
         self.time_label = tk.Label(self.frame, textvariable=self.time)
         self.time_label.config(**settings.get("style:time"))
-        self.time_label.grid(row=0, sticky=tk.E)
+        self.time_label.grid(row=0, padx=EXTRA_PAD, sticky=tk.E)
         # Game canvas
         canvas_width = settings.get("board:cell-size")*DEFAULT_PUZZLE_WIDTH + CANVAS_SPARE
         canvas_height = settings.get("board:cell-size")*DEFAULT_PUZZLE_HEIGHT + CANVAS_SPARE
+        border_fill = settings.get("style:border:fill")
         self.canvas = tk.Canvas(self.frame)
         self.canvas.config(width=canvas_width, height=canvas_height, highlightthickness=0)
-        self.canvas.grid(row=1, padx=5-CANVAS_OFFSET)
+        self.canvas.grid(row=1, pady=PAD-1, padx=PAD-CANVAS_OFFSET)
+        self.canvas.create_rectangle(0, 0, canvas_width-CANVAS_SPARE, canvas_height-CANVAS_SPARE, outline=border_fill)
 
 
 class ViewClues:
@@ -116,40 +119,42 @@ class ViewClues:
         self.parent = parent
         # Padding frame
         self.frame = tk.Frame(self.parent)
-        self.frame.grid(row=1, column=1, padx=PAD, pady=PAD, sticky=tk.N+tk.S)
-        self.frame.rowconfigure(0, weight=1)
+        self.frame.grid(row=1, column=1, padx=(EXTRA_PAD, PAD+EXTRA_PAD), pady=(0, PAD+EXTRA_PAD), sticky=tk.N+tk.S)
         self.frame.rowconfigure(1, weight=1)
+        self.frame.rowconfigure(3, weight=1)
+        # Across label
+        self.across_label = tk.Label(self.frame)
+        self.across_label.config(text="Across", anchor=tk.W, **settings.get("style:clue"))
+        self.across_label.grid(row=0, column=0, sticky=tk.N+tk.W)
         # Across frame
         self.across = tk.Frame(self.frame)
-        self.across.grid(row=0, pady=(0, EXTRA_PAD), sticky=tk.N+tk.S)
-        self.across.rowconfigure(1, weight=1)
-        # Across label
-        self.across_label = tk.Label(self.across)
-        self.across_label.config(text="Across", anchor=tk.W, **settings.get("style:label"))
-        self.across_label.grid(row=0, column=0, columnspan=2, sticky=tk.W)
+        self.across.config(highlightthickness=1, highlightbackground=settings.get("style:border:fill"))
+        self.across.grid(row=1, pady=(PAD-1, EXTRA_PAD), sticky=tk.N+tk.S)
+        self.across.rowconfigure(0, weight=1)
         # Across list
         self.across_clues = tk.StringVar(self.root)
         self.across_listbox = tk.Listbox(self.across, listvariable=self.across_clues)
         self.across_listbox.config(bd=0, selectborderwidth=0, **settings.get("style:list"))
-        self.across_listbox.grid(row=1, column=0, sticky=tk.N+tk.S)
+        self.across_listbox.grid(row=0, column=0, sticky=tk.N+tk.S)
         self.across_scrollbar = tk.Scrollbar(self.across)
         self.across_scrollbar.config(command=self.across_listbox.yview)
-        self.across_scrollbar.grid(row=1, column=1, sticky=tk.N+tk.S)
+        self.across_scrollbar.grid(row=0, column=1, sticky=tk.N+tk.S)
         self.across_listbox.config(yscrollcommand=self.across_scrollbar.set)
+        # Down Label
+        self.down_label = tk.Label(self.frame)
+        self.down_label.config(text="Down", anchor=tk.W, **settings.get("style:clue"))
+        self.down_label.grid(row=2, column=0, pady=(PAD, 0), sticky=tk.N+tk.W)
         # Down frame
         self.down = tk.Frame(self.frame)
-        self.down.grid(row=1, pady=(EXTRA_PAD, 0), sticky=tk.N+tk.S)
-        self.down.rowconfigure(1, weight=1)
-        # Down Label
-        self.down_label = tk.Label(self.down)
-        self.down_label.config(text="Down", anchor=tk.W, **settings.get("style:label"))
-        self.down_label.grid(row=0, column=0, columnspan=2, sticky=tk.W)
+        self.down.config(highlightthickness=1, highlightbackground=settings.get("style:border:fill"))
+        self.down.grid(row=3, pady=(EXTRA_PAD, 0), sticky=tk.N+tk.S)
+        self.down.rowconfigure(0, weight=1)
         # Down list
         self.down_clues = tk.StringVar(self.root)
         self.down_listbox = tk.Listbox(self.down)
         self.down_listbox.config(bd=0, selectborderwidth=0, **settings.get("style:list"))
-        self.down_listbox.grid(row=1, column=0, sticky=tk.N+tk.S)
+        self.down_listbox.grid(row=0, column=0, sticky=tk.N+tk.S)
         self.down_scrollbar = tk.Scrollbar(self.down)
         self.down_scrollbar.config(command=self.down_listbox.yview)
-        self.down_scrollbar.grid(row=1, column=1, sticky=tk.N+tk.S)
+        self.down_scrollbar.grid(row=0, column=1, sticky=tk.N+tk.S)
         self.down_listbox.config(yscrollcommand=self.down_scrollbar.set)
