@@ -66,15 +66,16 @@ class GroupView:
         self.parent = parent
         # Content frame
         self.frame = tk.Frame(self.parent)
+        # Reference
+        self.visible = False
 
     def show(self):
         """Show the widget in its parent."""
-        self.frame.grid()
+        self.visible = True
 
     def hide(self):
         """Hide the widget in its parent."""
-        self.frame.grid_forget()
-
+        self.visible = False
 
 
 class HeaderView(GroupView):
@@ -101,6 +102,7 @@ class HeaderView(GroupView):
 
     def show(self):
         """Show the widget in its parent."""
+        super().show()
         self.frame.grid(row=0, column=0, columnspan=4, padx=PAD, pady=(EXTRA_PAD, PAD), sticky=tk.W+tk.E)
 
 
@@ -131,6 +133,7 @@ class CrosswordView(GroupView):
 
     def show(self):
         """Show the widget in its parent."""
+        super().show()
         self.frame.grid(row=1, column=0, padx=PAD, pady=0)
 
 
@@ -181,4 +184,5 @@ class CluesView(GroupView):
 
     def show(self):
         """Show the widget in its parent."""
+        super().show()
         self.frame.grid(row=1, column=1, padx=(PAD, PAD+CANVAS_OFFSET), pady=(0, PAD+CANVAS_OFFSET), sticky=tk.N+tk.S)
