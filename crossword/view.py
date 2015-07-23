@@ -59,7 +59,6 @@ class View:
 class GroupView:
     """Parent class for a crossword application widget group."""
 
-
     def __init__(self, root, parent):
         """Build the widget group."""
         self.root = root
@@ -67,14 +66,21 @@ class GroupView:
         # Content frame
         self.frame = tk.Frame(self.parent)
         # Reference
+        self.loaded = False
         self.visible = False
+
+    def load(self):
+        """Load the graphical components of the group."""
+        self.loaded = True
 
     def show(self):
         """Show the widget in its parent."""
+        self.frame.grid()
         self.visible = True
 
     def hide(self):
         """Hide the widget in its parent."""
+        self.frame.grid_forget()
         self.visible = False
 
 
@@ -84,26 +90,39 @@ class HeaderView(GroupView):
     def __init__(self, root, parent):
         """Build the header widget group."""
         super().__init__(root, parent)
-        self.frame.columnconfigure(0, weight=1)
-        # Title of the crossword puzzle
+        # Crossword title
         self.title = tk.StringVar(self.root)
         self.title_label = tk.Label(self.frame, textvariable=self.title)
-        self.title_label.config(**settings.get("style:title"))
-        self.title_label.grid(row=0, column=0, pady=(0, PAD), sticky=tk.W)
-        # Author of the crossword puzzle
+        # Crossword author
         self.author = tk.StringVar(self.root)
         self.author_label = tk.Label(self.frame, textvariable=self.author)
+        # Dividing line separating the header and other groups
+        self.separator = tk.Frame(self.frame)
+        # Load
+        self.load()
+
+    def load(self):
+        """Load the graphical components of the group."""
+        # Frame
+        self.frame.columnconfigure(0, weight=1)
+        # Crossword title
+        self.title_label.config(**settings.get("style:title"))
+        self.title_label.grid(row=0, column=0, pady=(0, PAD), sticky=tk.W)
+        # Crossword author
         self.author_label.config(**settings.get("style:author"))
         self.author_label.grid(row=0, column=0, padx=EXTRA_PAD, pady=(0, PAD), sticky=tk.E)
-        # Dividing line separating the header and the rest of the application
-        self.separator = tk.Frame(self.frame)
+        # Separator
         self.separator.config(height=SEPARATOR_HEIGHT, bg=SEPARATOR_COLOR)
         self.separator.grid(row=1, padx=EXTRA_PAD, sticky=tk.W+tk.E)
+        # Loaded
+        self.loaded = True
 
     def show(self):
         """Show the widget in its parent."""
-        super().show()
+        # Custom grid the frame to the parent
         self.frame.grid(row=0, column=0, columnspan=4, padx=PAD, pady=(EXTRA_PAD, PAD), sticky=tk.W+tk.E)
+        # Visibility
+        self.visible = True
 
 
 class CrosswordView(GroupView):
@@ -115,26 +134,38 @@ class CrosswordView(GroupView):
         # Crossword clue
         self.clue = tk.StringVar(self.root)
         self.clue_label = tk.Label(self.frame, textvariable=self.clue)
-        self.clue_label.config(**settings.get("style:clue"))
-        self.clue_label.grid(row=0, sticky=tk.W)
         # Game timer
         self.time = tk.StringVar(self.root)
         self.time_label = tk.Label(self.frame, textvariable=self.time)
+        # Game canvas
+        self.canvas = tk.Canvas(self.frame)
+        # Load
+        self.load()
+
+    def load(self, width=DEFAULT_PUZZLE_WIDTH, height=DEFAULT_PUZZLE_HEIGHT):
+        """Load the graphical components of the group."""
+        # Crossword clue
+        self.clue_label.config(**settings.get("style:clue"))
+        self.clue_label.grid(row=0, sticky=tk.W)
+        # Game timer
         self.time_label.config(**settings.get("style:time"))
         self.time_label.grid(row=0, padx=EXTRA_PAD+1, sticky=tk.E)
         # Game canvas
-        canvas_width = settings.get("board:cell-size")*DEFAULT_PUZZLE_WIDTH + CANVAS_SPARE
-        canvas_height = settings.get("board:cell-size")*DEFAULT_PUZZLE_HEIGHT + CANVAS_SPARE
+        canvas_width = settings.get("board:cell-size")*width + CANVAS_SPARE
+        canvas_height = settings.get("board:cell-size")*height + CANVAS_SPARE
         border_fill = settings.get("style:border:fill")
-        self.canvas = tk.Canvas(self.frame)
         self.canvas.config(width=canvas_width, height=canvas_height, highlightthickness=0)
         self.canvas.grid(row=1, pady=PAD, padx=(PAD-CANVAS_OFFSET, 0))
         self.canvas.create_rectangle(0, 0, canvas_width-CANVAS_SPARE, canvas_height-CANVAS_SPARE, outline=border_fill)
+        # Loaded
+        self.loaded = True
 
     def show(self):
         """Show the widget in its parent."""
-        super().show()
+        # Custom grid the frame to the parent
         self.frame.grid(row=1, column=0, padx=PAD, pady=0)
+        # Visibility
+        self.visible = True
 
 
 class CluesView(GroupView):
@@ -143,46 +174,62 @@ class CluesView(GroupView):
     def __init__(self, root, parent):
         """Build the clues widget group."""
         super().__init__(root, parent)
+        # Across label
+        self.across_label = tk.Label(self.frame)
+        # Across frame
+        self.across = tk.Frame(self.frame)
+        # Across list and scrollbar
+        self.across_clues = tk.StringVar(self.root)
+        self.across_listbox = tk.Listbox(self.across, listvariable=self.across_clues)
+        self.across_scrollbar = tk.Scrollbar(self.across)
+        # Down Label
+        self.down_label = tk.Label(self.frame)
+        # Down frame
+        self.down = tk.Frame(self.frame)
+        # Down list and scrollbar
+        self.down_clues = tk.StringVar(self.root)
+        self.down_listbox = tk.Listbox(self.down)
+        self.down_scrollbar = tk.Scrollbar(self.down)
+        # Load
+        self.load()
+
+    def load(self):
+        """Load the graphical components of the group."""
+        # Frame
         self.frame.rowconfigure(1, weight=1)
         self.frame.rowconfigure(3, weight=1)
         # Across label
-        self.across_label = tk.Label(self.frame)
         self.across_label.config(text="Across", anchor=tk.W, **settings.get("style:clue"))
         self.across_label.grid(row=0, column=0, pady=(0, EXTRA_PAD), sticky=tk.N+tk.W)
         # Across frame
-        self.across = tk.Frame(self.frame)
         self.across.config(highlightthickness=1, highlightbackground=settings.get("style:border:fill"))
         self.across.grid(row=1, pady=(CANVAS_OFFSET, PAD), sticky=tk.N+tk.S)
         self.across.rowconfigure(0, weight=1)
-        # Across list
-        self.across_clues = tk.StringVar(self.root)
-        self.across_listbox = tk.Listbox(self.across, listvariable=self.across_clues)
+        # Across listbox
         self.across_listbox.config(bd=0, selectborderwidth=0, **settings.get("style:list"))
         self.across_listbox.grid(row=0, column=0, sticky=tk.N+tk.S)
-        self.across_scrollbar = tk.Scrollbar(self.across)
+        self.across_listbox.config(yscrollcommand=self.across_scrollbar.set)
+        # Across scrollbar
         self.across_scrollbar.config(command=self.across_listbox.yview)
         self.across_scrollbar.grid(row=0, column=1, sticky=tk.N+tk.S)
-        self.across_listbox.config(yscrollcommand=self.across_scrollbar.set)
-        # Down Label
-        self.down_label = tk.Label(self.frame)
+        # Down label
         self.down_label.config(text="Down", anchor=tk.W, **settings.get("style:clue"))
         self.down_label.grid(row=2, column=0, pady=(PAD, 0), sticky=tk.N+tk.W)
         # Down frame
-        self.down = tk.Frame(self.frame)
         self.down.config(highlightthickness=1, highlightbackground=settings.get("style:border:fill"))
         self.down.grid(row=3, pady=(EXTRA_PAD, 0), sticky=tk.N+tk.S)
         self.down.rowconfigure(0, weight=1)
-        # Down list
-        self.down_clues = tk.StringVar(self.root)
-        self.down_listbox = tk.Listbox(self.down)
+        # Down listbox
         self.down_listbox.config(bd=0, selectborderwidth=0, **settings.get("style:list"))
         self.down_listbox.grid(row=0, column=0, sticky=tk.N+tk.S)
-        self.down_scrollbar = tk.Scrollbar(self.down)
+        self.down_listbox.config(yscrollcommand=self.down_scrollbar.set)
+        # Down scrollbar
         self.down_scrollbar.config(command=self.down_listbox.yview)
         self.down_scrollbar.grid(row=0, column=1, sticky=tk.N+tk.S)
-        self.down_listbox.config(yscrollcommand=self.down_scrollbar.set)
+        # Loaded
+        self.loaded = True
 
     def show(self):
         """Show the widget in its parent."""
-        super().show()
         self.frame.grid(row=1, column=1, padx=(PAD, PAD+CANVAS_OFFSET), pady=(0, PAD+CANVAS_OFFSET), sticky=tk.N+tk.S)
+        self.visible = True
