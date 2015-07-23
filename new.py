@@ -69,21 +69,46 @@ SERVER_DATA_TEMPLATE = {
     "time-finish": 0,
 }
 
-# Crossword models
-def index_to_position(index, array_width):
-    """Determine the coordinates of an index in an array of specified width."""
-    return index % array_width, index // array_width
 
-def position_to_index(x, y, array_width):
-    """Determine the coordinates of an index in an array of specified width."""
-    return x + y*array_width
+# Crossword models
+def index_to_position(index, width):
+    """Determine the cartesian coordinates of an index in an array.
+
+    index - index in the array
+    width - width of the array
+    """
+    return index % width, index // width
+
+
+def position_to_index(x, y, width):
+    """Determine the index in an array of cartesian coordinates.
+
+    x - x position in cartesian
+    y - y position in cartesian
+    width - width of the array
+    """
+    return x + y*width
+
 
 class CrosswordCell:
-    """Container class for a single crossword cell. This handles setting the fill, coloring the letter, and drawing
-    rebus mode. It draws itself to the canvas given its top left coordinates. Cell number is drawn in the top left."""
+    """Container class for a single crossword cell.
+
+    This handles setting the fill, coloring the letter, and drawing
+    rebus mode. It draws itself to the canvas given its top left
+    coordinates. Cell number is drawn in the top left."""
 
     def __init__(self, canvas, type, color, fill, x, y, letters="", number=""):
-        """Magic method to initialize a new crossword cell."""
+        """Initialize a new CrosswordCell.
+
+        canvas - tkinter.Canvas object for the CrosswordCell to draw on
+        type - LETTER or EMPTY
+        color - color of the letter in the cell
+        fill - background color of the cell
+        x - x position of the top left corner of the cell
+        y - y position of the top left corner of the cell
+        letters - the letters in the cell (supports rebus mode)
+        number - the number in the top right corner of the cell
+        """
         self.canvas = canvas  # Tkinter Canvas from the main application
         self.type = type  # Letter or number
         self.color = color  # Letter color
@@ -100,7 +125,10 @@ class CrosswordCell:
         elif self.type != LETTER: self.type = LETTER  # There are only two types
 
     def draw(self):
-        """Draw the cell, its fill, letter and color, and number to the canvas at the cell's position."""
+        """Draw the cell, its fill, letter and color, and number.
+
+        Draws to the canvas at the cell's position.
+        """
         self.canvas.delete(*self.canvas_ids) # Clear all parts of the cell drawn on the canvas
         cell_position = (self.x, self.y, self.x+config["board"]["cell-size"],
                          self.y+config["board"]["cell-size"])
@@ -119,31 +147,56 @@ class CrosswordCell:
                 self.canvas_ids.append(number_id)
 
     def update(self, **options):
-        """Update cell attributes and redraw it to the canvas."""
+        """Update cell attributes and redraw it to the canvas.
+
+        It is possible for this function to access non-graphical
+        attributes of the CrosswordCell.
+        """
         self.__dict__.update(options)  # Vulnerable
         self.rebus = len(self.letters)
         self.draw()
 
+
 class CrosswordWord:
-    """Container class for a crossword word that holds cell and puzzle info references."""
+    """Container class for a crossword word.
+
+    Holds cell and puzzle info references."""
 
     def __init__(self, cells, info, solution):
-        """Initialize a new crossword word with its corresponding letter cells puzzle info."""
+        """Initialize a new crossword word with its corresponding
+        letter cells puzzle info.
+
+        cells - list of cells that comprise the word
+        info - word info from the puzzle word list
+        solution - the correct word for this cell
+        """
         self.cells = cells
         self.info = info
         self.solution = solution
 
     def update(self, **options):
-        """Update the options of every cell in the word. This is simply a parent convenience method."""
+        """Update the options of every cell in the word. This is simply
+        a parent convenience method.
+
+        This method is also plagued by the same problems of
+        `CrosswordCell.update`.
+        """
         for cell in self.cells:
             cell.update(**options)
 
+
 class CrosswordBoard:
-    """Container class for an entire crossword board. Essentially serves as a second layer on top of the puzzle class.
-    This is what the server keeps track of, and every time a client makes a change they send the fill of their board."""
+    """Container class for an entire crossword board
+
+    Essentially serves as a second layer on top of the puzzle class.
+    This is what the server keeps track of, and every time a client
+    makes a change they send the fill of their board."""
 
     def __init__(self, puzzle):
-        """Create a crossword given a puzzle object."""
+        """Create a crossword given a puzzle object.
+
+        puzzle - puz library puzzle object
+        """
         self.puzzle = puzzle
 
         self.cells = []
@@ -160,19 +213,29 @@ class CrosswordBoard:
         self.paused = True
 
     def __repr__(self):
-        """Magic method for string representation."""
+        """Get the string representation of the board."""
         return "[%i] crossword board" % id(self)
 
     def __setitem__(self, position, value):
-        """Magic method for coordinate based index setting."""
+        """Set the value at a position in the crossword board.
+
+        position - (x, y) value based on the array position of the item
+        value - value to put at (x, y)
+        """
         self.cells[position[1]][position[0]] = value
 
     def __getitem__(self, position):
-        """Magic method for coordinate based index getting."""
+        """Get the value at a position in the crossword board.
+
+        position - (x, y) value based on the array position of the item
+        """
         return self.cells[position[1]][position[0]]
 
     def generate_words(self):
-        """Generates all of the words for the crossword board and puts them in two lists."""
+        """Generates all of the words for the crossword board.
+
+        Puts them in two lists, across and down.
+        """
         for info in self.puzzle.numbering.across:
             x, y = index_to_position(info["cell"], self.puzzle.width)
             length = info["len"]
@@ -188,11 +251,21 @@ class CrosswordBoard:
         logging.log(DEBUG, "%s crossword words generated", repr(self))
 
     def index(self, cell):
-        """Get the coordinates of a cell if it exists in the crossword board."""
+        """Get the coordinates of a cell if it exists in the board.
+
+        cell - CrosswordCell to search for
+        """
         return index_to_position(sum(self.cells, []).index(cell), self.puzzle.width)
 
     def set_selected(self, x, y, direction):
-        """Set the word at the position of the origin letter (and of the direction) as selected."""
+        """Set the word at the position of the origin letter as selected.
+
+        Also sets the rest of the word as selected.
+
+        x - x position of the origin letter
+        y - y position of the origin letter
+        direction - direction of the word to be selected
+        """
         origin = self[x, y]
         if direction == ACROSS: words = self.across_words
         else: words = self.down_words
@@ -470,7 +543,12 @@ class CrosswordPlayer:
                 i += s
             self.board.set_selected(x, y, self.direction)
 
-    def get_selected_clue(self): pass
+    def get_selected_clue(self):
+        selection = self.across_list.curselection()
+        if selection: return self.numbering.across[int(selection[0])]
+        selection = self.down_list.curselection()
+        if selection: return self.numbering.down[int(selection[0])]
+
     def has_focus(self, widget): pass
     def write_cell(self, cell, letters): pass
 
