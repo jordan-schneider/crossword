@@ -61,13 +61,13 @@ class GroupView:
         self.parent = parent
         # Content frame
         self.frame = tk.Frame(self.parent)
+        self.load()
         # Reference
-        self.loaded = False
         self.visible = False
 
     def load(self):
         """Load the graphical components of the group."""
-        self.loaded = True
+        pass
 
     def show(self):
         """Show the widget in its parent."""
@@ -100,6 +100,7 @@ class HeaderView(GroupView):
     def load(self):
         """Load the graphical components of the group."""
         # Frame
+        self.frame.grid_configure(row=0, column=0, columnspan=4, padx=PAD, pady=(TINY_PAD, PAD), sticky=tk.W+tk.E)
         self.frame.columnconfigure(0, weight=1)
         # Crossword title
         self.title_label.config(**settings.get("style:title"))
@@ -110,15 +111,6 @@ class HeaderView(GroupView):
         # Separator
         self.separator.config(height=SEPARATOR_HEIGHT, bg=SEPARATOR_COLOR)
         self.separator.grid(row=1, padx=TINY_PAD, sticky=tk.W+tk.E)
-        # Loaded
-        self.loaded = True
-
-    def show(self):
-        """Show the widget in its parent."""
-        # Custom grid the frame to the parent
-        self.frame.grid(row=0, column=0, columnspan=4, padx=PAD, pady=(TINY_PAD, PAD), sticky=tk.W+tk.E)
-        # Visibility
-        self.visible = True
 
 
 class PuzzleView(GroupView):
@@ -154,8 +146,6 @@ class PuzzleView(GroupView):
         self.canvas.config(width=canvas_width, height=canvas_height, highlightthickness=0)
         self.canvas.grid(row=1, pady=PAD, padx=(PAD-CANVAS_PAD, 0))
         self.canvas.create_rectangle(0, 0, canvas_width-CANVAS_SPARE, canvas_height-CANVAS_SPARE, outline=border_fill)
-        # Loaded
-        self.loaded = True
 
 
 class CluesView(GroupView):
@@ -217,5 +207,3 @@ class CluesView(GroupView):
         # Down scrollbar
         self.down_scrollbar.config(command=self.down_listbox.yview)
         self.down_scrollbar.grid(row=0, column=1, sticky=tk.N+tk.S)
-        # Loaded
-        self.loaded = True
