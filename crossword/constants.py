@@ -22,12 +22,12 @@ ROOT_DIRECTORY = os.path.abspath(os.path.dirname(__file__))
 SETTINGS_PATH = os.path.join(ROOT_DIRECTORY, "settings.json")
 
 # Application
-HALF_PAD = 5
-FULL_PAD = HALF_PAD * 2
-EXTRA_PAD = 2
+FULL_PAD = 10
+HALF_PAD = FULL_PAD // 2
+TINY_PAD = HALF_PAD // 2
 PAD = HALF_PAD
 CANVAS_SPARE = 2 + 2
-CANVAS_OFFSET = 3
+CANVAS_PAD = 3
 
 # Header group
 SEPARATOR_HEIGHT = 1

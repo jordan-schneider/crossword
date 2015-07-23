@@ -1,8 +1,8 @@
 """The Main Crossword Application Interface.
 
-Use `view.get()` to initialize, build, and return a new crossword
-application. The application must be the main thread, as tkinter is
-not thread-safe.
+View serves as the graphical component in crossword. Instantiating a
+`View` object spawns and loads a new crossword application. This
+application must be the main thread, as tkinter is not thread-safe.
 """
 
 
@@ -110,17 +110,17 @@ class HeaderView(GroupView):
         self.title_label.grid(row=0, column=0, pady=(0, PAD), sticky=tk.W)
         # Crossword author
         self.author_label.config(**settings.get("style:author"))
-        self.author_label.grid(row=0, column=0, padx=EXTRA_PAD, pady=(0, PAD), sticky=tk.E)
+        self.author_label.grid(row=0, column=0, padx=TINY_PAD, pady=(0, PAD), sticky=tk.E)
         # Separator
         self.separator.config(height=SEPARATOR_HEIGHT, bg=SEPARATOR_COLOR)
-        self.separator.grid(row=1, padx=EXTRA_PAD, sticky=tk.W+tk.E)
+        self.separator.grid(row=1, padx=TINY_PAD, sticky=tk.W+tk.E)
         # Loaded
         self.loaded = True
 
     def show(self):
         """Show the widget in its parent."""
         # Custom grid the frame to the parent
-        self.frame.grid(row=0, column=0, columnspan=4, padx=PAD, pady=(EXTRA_PAD, PAD), sticky=tk.W+tk.E)
+        self.frame.grid(row=0, column=0, columnspan=4, padx=PAD, pady=(TINY_PAD, PAD), sticky=tk.W+tk.E)
         # Visibility
         self.visible = True
 
@@ -144,28 +144,22 @@ class CrosswordView(GroupView):
 
     def load(self, width=DEFAULT_PUZZLE_WIDTH, height=DEFAULT_PUZZLE_HEIGHT):
         """Load the graphical components of the group."""
+        self.frame.grid_configure(row=1, column=0, padx=PAD, pady=0)
         # Crossword clue
         self.clue_label.config(**settings.get("style:clue"))
         self.clue_label.grid(row=0, sticky=tk.W)
         # Game timer
         self.time_label.config(**settings.get("style:time"))
-        self.time_label.grid(row=0, padx=EXTRA_PAD+1, sticky=tk.E)
+        self.time_label.grid(row=0, padx=TINY_PAD+1, sticky=tk.E)
         # Game canvas
         canvas_width = settings.get("board:cell-size")*width + CANVAS_SPARE
         canvas_height = settings.get("board:cell-size")*height + CANVAS_SPARE
         border_fill = settings.get("style:border:fill")
         self.canvas.config(width=canvas_width, height=canvas_height, highlightthickness=0)
-        self.canvas.grid(row=1, pady=PAD, padx=(PAD-CANVAS_OFFSET, 0))
+        self.canvas.grid(row=1, pady=PAD, padx=(PAD-CANVAS_PAD, 0))
         self.canvas.create_rectangle(0, 0, canvas_width-CANVAS_SPARE, canvas_height-CANVAS_SPARE, outline=border_fill)
         # Loaded
         self.loaded = True
-
-    def show(self):
-        """Show the widget in its parent."""
-        # Custom grid the frame to the parent
-        self.frame.grid(row=1, column=0, padx=PAD, pady=0)
-        # Visibility
-        self.visible = True
 
 
 class CluesView(GroupView):
@@ -196,14 +190,15 @@ class CluesView(GroupView):
     def load(self):
         """Load the graphical components of the group."""
         # Frame
+        self.frame.grid_configure(row=1, column=1, padx=(PAD, PAD+TINY_PAD), pady=(0, PAD+CANVAS_PAD), sticky=tk.N+tk.S)
         self.frame.rowconfigure(1, weight=1)
         self.frame.rowconfigure(3, weight=1)
         # Across label
         self.across_label.config(text="Across", anchor=tk.W, **settings.get("style:clue"))
-        self.across_label.grid(row=0, column=0, pady=(0, EXTRA_PAD), sticky=tk.N+tk.W)
+        self.across_label.grid(row=0, column=0, pady=(0, TINY_PAD), sticky=tk.N+tk.W)
         # Across frame
         self.across.config(highlightthickness=1, highlightbackground=settings.get("style:border:fill"))
-        self.across.grid(row=1, pady=(CANVAS_OFFSET, PAD), sticky=tk.N+tk.S)
+        self.across.grid(row=1, pady=(CANVAS_PAD, PAD), sticky=tk.N+tk.S)
         self.across.rowconfigure(0, weight=1)
         # Across listbox
         self.across_listbox.config(bd=0, selectborderwidth=0, **settings.get("style:list"))
@@ -217,7 +212,7 @@ class CluesView(GroupView):
         self.down_label.grid(row=2, column=0, pady=(PAD, 0), sticky=tk.N+tk.W)
         # Down frame
         self.down.config(highlightthickness=1, highlightbackground=settings.get("style:border:fill"))
-        self.down.grid(row=3, pady=(EXTRA_PAD, 0), sticky=tk.N+tk.S)
+        self.down.grid(row=3, pady=(TINY_PAD, 0), sticky=tk.N+tk.S)
         self.down.rowconfigure(0, weight=1)
         # Down listbox
         self.down_listbox.config(bd=0, selectborderwidth=0, **settings.get("style:list"))
@@ -228,8 +223,3 @@ class CluesView(GroupView):
         self.down_scrollbar.grid(row=0, column=1, sticky=tk.N+tk.S)
         # Loaded
         self.loaded = True
-
-    def show(self):
-        """Show the widget in its parent."""
-        self.frame.grid(row=1, column=1, padx=(PAD, PAD+CANVAS_OFFSET), pady=(0, PAD+CANVAS_OFFSET), sticky=tk.N+tk.S)
-        self.visible = True
