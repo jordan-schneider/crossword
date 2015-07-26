@@ -41,10 +41,6 @@ class View:
 
     def main(self):
         """Run the main loop of the view."""
-        self.header.title.set("Hello, world!")
-        self.header.author.set("Noah Kim")
-        self.puzzle.clue.set("This is a clue")
-        self.puzzle.time.set("00:00:00")
         self.root.mainloop()
 
     def stop(self):
