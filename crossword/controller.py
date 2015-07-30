@@ -63,8 +63,8 @@ class PuzzleController(SubController):
                 view.update(fill=settings.get("board:fill:empty"))
             elif cell.kind is LETTER:
                 view.update(fill=settings.get("board:fill:default"))
-                view.update(letters=cell.solution)
                 view.update(number=cell.number)
+                view.update(letters=cell.solution)
 
 
 class CluesController(SubController):

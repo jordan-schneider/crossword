@@ -208,12 +208,12 @@ class CellView:
         if self.letters:
             h = s // 2 + 1
             pos = (self.x*s + h, self.y*s + h)
-            font = (settings.get("board:font-family"), int(s / (1.2 + 0.6*len(self.letters))))
+            font = (settings.get("board:font-family"), int(s / (1.2 + 0.6*len(self.letters)))-3)
             self.letters_id = self.canvas.create_text(*pos, text=self.letters, font=font, fill=self.color)
         if self.number:
             pos = (self.x*s + NUMBER_LEFT, self.y*s + NUMBER_TOP)
-            font = (settings.get("board:font-family"), int(s / 3.5))
-            self.number_id = self.canvas.create_text(*pos, text=self.number, font=font)
+            font = (settings.get("board:font-family"), int(s / 3.5)-2)
+            self.number_id = self.canvas.create_text(*pos, text=self.number, font=font, anchor=tk.W)
 
     def reload(self):
         self.canvas.delete(self.box_id, self.letters_id, self.number_id)

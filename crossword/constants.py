@@ -8,7 +8,6 @@ manually set options.
 
 # Import
 import os
-import platform
 
 
 # Data
@@ -48,8 +47,8 @@ DEFAULT_PUZZLE_WIDTH = 15
 DEFAULT_PUZZLE_HEIGHT = 15
 
 # Cell model
-NUMBER_LEFT = 6
-NUMBER_TOP = 3
+NUMBER_LEFT = 2
+NUMBER_TOP = 6
 
 # Puzzle
 LETTER = "-"

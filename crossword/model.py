@@ -82,6 +82,7 @@ class WordsModel:
             word.cells = linked
             for cell in linked:
                 cell.word = word
+            word.cells[0].number = word.number
             # Add the word to the lists
             self.words.append(word)
             self.across.append(word)
@@ -93,6 +94,7 @@ class WordsModel:
             word.cells = linked
             for cell in linked:
                 cell.word = word
+            word.cells[0].number = word.number
             # Add the word to the lists
             self.words.append(word)
             self.down.append(word)
