@@ -4,11 +4,11 @@ from .constants import *
 
 def to_position(i: int, w: int) -> tuple:
     y, x = divmod(i, w)
-    return x-1, y
+    return x, y
 
 
 def to_index(x: int, y: int, w: int) -> int:
-    return y*w + x+1
+    return y*w + x
 
 
 class CellModel:
@@ -27,6 +27,11 @@ class CellModel:
         self.number = ""
         self.owner = None
         self.fill = ""
+        # Drawing
+        self.drawings = []
+
+    def __repr__(self):
+        return "(%i, %i)" % (self.x, self.y)
 
 
 class CellsModel:
@@ -35,9 +40,9 @@ class CellsModel:
     def __init__(self, puzzle: puz.Puzzle):
         """Initialize a new cells container."""
         self.cells = []
-        for i, (kind, solution) in enumerate(zip(puzzle.fill, puzzle.solution)):
-            x, y = to_position(i, puzzle.width)
-            self.cells.append(CellModel(x, y, kind, solution))
+        zipped = list(zip(puzzle.fill, puzzle.solution))
+        for y, row in enumerate(zipped[i:i+puzzle.width] for i in range(0, len(zipped), puzzle.width)):
+            self.cells.append([CellModel(x, y, kind, solution) for x, (kind, solution) in enumerate(row)])
 
     def __getitem__(self, position: tuple):
         """Get a cell with its coordinate position."""
@@ -68,7 +73,7 @@ class WordsModel:
         numbering = puzzle.clue_numbering()
         for info in numbering.across:
             x, y = to_position(info["cell"], puzzle.width)
-            linked = list(map(lambda j: cells[x, y+j], range(info["len"])))
+            linked = list(map(lambda j: cells[x+j, y], range(info["len"])))
             word = WordModel(ACROSS, info["num"], info["clue"])
             # Link the word and cells
             word.cells = linked
@@ -80,7 +85,7 @@ class WordsModel:
         for info in numbering.down:
             x, y = to_position(info["cell"], puzzle.width)
             linked = list(map(lambda j: cells[x, y+j], range(info["len"])))
-            word = WordModel(DOWN, info["number"], info["down"])
+            word = WordModel(DOWN, info["num"], info["clue"])
             # Link the word and cells
             word.cells = linked
             for cell in linked:
@@ -94,7 +99,7 @@ class PuzzleModel:
     """Basic container class for a single crossword cell."""
 
     def __init__(self, puzzle: puz.Puzzle):
-        """Initialize a new cell container."""
+        """Initialize a new cell container with a puzzle."""
         # Basic puzzle data
         self.title = puzzle.title
         self.author = puzzle.author
@@ -112,18 +117,8 @@ class PuzzleModel:
 class ProfileModel:
     """Basic player profile model for use on the client side."""
 
-    def __init__(self, name, color):
+    def __init__(self, name: str, color: str):
         """Initialize a player profile model."""
         self.name = name
         self.color = color
 
-
-class SelectionModel:
-    """Controller selection container."""
-
-    def __init__(self):
-        """Initialize a selection container."""
-        self.cell = None
-        self.word = None
-
-    def set(self, cell: CellModel):

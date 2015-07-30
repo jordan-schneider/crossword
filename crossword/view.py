@@ -31,9 +31,9 @@ class View:
         self.frame = tk.Frame(self.root)
         self.frame.pack(fill="both", padx=PAD, pady=PAD)
         # Initialize widget groups
-        self.header = HeaderView(self.root, self.frame)
-        self.puzzle = PuzzleView(self.root, self.frame)
-        self.clues = CluesView(self.root, self.frame)
+        self.header = HeaderView(self)
+        self.puzzle = PuzzleView(self)
+        self.clues = CluesView(self)
         # Show widgets
         self.header.show()
         self.puzzle.show()
@@ -48,15 +48,15 @@ class View:
         self.root.quit()
 
 
-class GroupView:
+class SubView:
     """Parent class for a crossword application widget group."""
 
-    def __init__(self, root, parent):
+    def __init__(self, parent: View):
         """Build the widget group."""
-        self.root = root
         self.parent = parent
+        self.root = self.parent.root
         # Content frame
-        self.frame = tk.Frame(self.parent)
+        self.frame = tk.Frame(self.parent.frame)
         self.load()
         # Reference
         self.visible = False
@@ -76,12 +76,12 @@ class GroupView:
         self.visible = False
 
 
-class HeaderView(GroupView):
+class HeaderView(SubView):
     """The header group of the crossword application."""
 
-    def __init__(self, root, parent):
+    def __init__(self, parent: View):
         """Build the header widget group."""
-        super().__init__(root, parent)
+        super().__init__(parent)
         # Crossword title
         self.title = tk.StringVar(self.root)
         self.title_label = tk.Label(self.frame, textvariable=self.title)
@@ -109,12 +109,12 @@ class HeaderView(GroupView):
         self.separator.grid(row=1, padx=TINY_PAD, sticky=tk.W+tk.E)
 
 
-class PuzzleView(GroupView):
+class PuzzleView(SubView):
     """The puzzle group of the crossword application."""
 
-    def __init__(self, root, parent):
+    def __init__(self, parent: View):
         """Build the crossword widget group."""
-        super().__init__(root, parent)
+        super().__init__(parent)
         # Crossword clue
         self.clue = tk.StringVar(self.root)
         self.clue_label = tk.Label(self.frame, textvariable=self.clue)
@@ -144,12 +144,12 @@ class PuzzleView(GroupView):
         self.canvas.create_rectangle(0, 0, canvas_width-CANVAS_SPARE, canvas_height-CANVAS_SPARE, outline=border_fill)
 
 
-class CluesView(GroupView):
+class CluesView(SubView):
     """The clues group of the crossword application."""
 
-    def __init__(self, root, parent):
+    def __init__(self, parent: View):
         """Build the clues widget group."""
-        super().__init__(root, parent)
+        super().__init__(parent)
         # Across label
         self.across_label = tk.Label(self.frame)
         # Across frame
