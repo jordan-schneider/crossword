@@ -57,7 +57,6 @@ class SubView:
         self.root = self.parent.root
         # Content frame
         self.frame = tk.Frame(self.parent.frame)
-        self.load()
         # Reference
         self.visible = False
 
@@ -153,19 +152,17 @@ class CluesView(SubView):
         # Across label
         self.across_label = tk.Label(self.frame)
         # Across frame
-        self.across = tk.Frame(self.frame)
+        self.across_frame = tk.Frame(self.frame)
         # Across list and scrollbar
-        self.across_clues = tk.StringVar(self.root)
-        self.across_listbox = tk.Listbox(self.across, listvariable=self.across_clues)
-        self.across_scrollbar = tk.Scrollbar(self.across)
+        self.across = CustomListbox(self.across_frame)
+        self.across_scrollbar = tk.Scrollbar(self.across_frame)
         # Down Label
         self.down_label = tk.Label(self.frame)
         # Down frame
-        self.down = tk.Frame(self.frame)
+        self.down_frame = tk.Frame(self.frame)
         # Down list and scrollbar
-        self.down_clues = tk.StringVar(self.root)
-        self.down_listbox = tk.Listbox(self.down)
-        self.down_scrollbar = tk.Scrollbar(self.down)
+        self.down = CustomListbox(self.down_frame)
+        self.down_scrollbar = tk.Scrollbar(self.down_frame)
         # Load
         self.load()
 
@@ -179,27 +176,38 @@ class CluesView(SubView):
         self.across_label.config(text="Across", anchor=tk.W, **settings.get("style:clue"))
         self.across_label.grid(row=0, column=0, pady=(0, TINY_PAD), sticky=tk.N+tk.W)
         # Across frame
-        self.across.config(highlightthickness=1, highlightbackground=settings.get("style:border:fill"))
-        self.across.grid(row=1, pady=(CANVAS_PAD, PAD), sticky=tk.N+tk.S)
-        self.across.rowconfigure(0, weight=1)
+        self.across_frame.config(highlightthickness=1, highlightbackground=settings.get("style:border:fill"))
+        self.across_frame.grid(row=1, pady=(CANVAS_PAD, PAD), sticky=tk.N+tk.S)
+        self.across_frame.rowconfigure(0, weight=1)
         # Across listbox
-        self.across_listbox.config(bd=0, selectborderwidth=0, **settings.get("style:list"))
-        self.across_listbox.grid(row=0, column=0, sticky=tk.N+tk.S)
-        self.across_listbox.config(yscrollcommand=self.across_scrollbar.set)
+        self.across.config(bd=0, selectborderwidth=0, **settings.get("style:list"))
+        self.across.grid(row=0, column=0, sticky=tk.N+tk.S)
+        self.across.config(yscrollcommand=self.across_scrollbar.set)
         # Across scrollbar
-        self.across_scrollbar.config(command=self.across_listbox.yview)
+        self.across_scrollbar.config(command=self.across.yview)
         self.across_scrollbar.grid(row=0, column=1, sticky=tk.N+tk.S)
         # Down label
         self.down_label.config(text="Down", anchor=tk.W, **settings.get("style:clue"))
         self.down_label.grid(row=2, column=0, pady=(PAD, 0), sticky=tk.N+tk.W)
         # Down frame
-        self.down.config(highlightthickness=1, highlightbackground=settings.get("style:border:fill"))
-        self.down.grid(row=3, pady=(TINY_PAD, 0), sticky=tk.N+tk.S)
-        self.down.rowconfigure(0, weight=1)
+        self.down_frame.config(highlightthickness=1, highlightbackground=settings.get("style:border:fill"))
+        self.down_frame.grid(row=3, pady=(TINY_PAD, 0), sticky=tk.N+tk.S)
+        self.down_frame.rowconfigure(0, weight=1)
         # Down listbox
-        self.down_listbox.config(bd=0, selectborderwidth=0, **settings.get("style:list"))
-        self.down_listbox.grid(row=0, column=0, sticky=tk.N+tk.S)
-        self.down_listbox.config(yscrollcommand=self.down_scrollbar.set)
+        self.down.config(bd=0, selectborderwidth=0, **settings.get("style:list"))
+        self.down.grid(row=0, column=0, sticky=tk.N+tk.S)
+        self.down.config(yscrollcommand=self.down_scrollbar.set)
         # Down scrollbar
-        self.down_scrollbar.config(command=self.down_listbox.yview)
+        self.down_scrollbar.config(command=self.down.yview)
         self.down_scrollbar.grid(row=0, column=1, sticky=tk.N+tk.S)
+
+
+class CustomListbox(tk.Listbox):
+
+    def clear(self):
+        self.delete("0", tk.END)
+
+    def set(self, values):
+        self.clear()
+        for value in values:
+            self.insert(tk.END, value)

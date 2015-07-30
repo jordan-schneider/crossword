@@ -40,14 +40,14 @@
       "fg": "black",
       "font": [
         "tkDefaultFont",
-        20
+        15
       ]
     },
     "clue": {
       "fg": "black",
       "font": [
         "tkDefaultFont",
-        20
+        15
       ]
     },
     "font": {
@@ -57,7 +57,7 @@
       "fg": "black",
       "font": [
         "tkDefaultFont",
-        25
+        17
       ]
     },
     "label": {
@@ -83,7 +83,7 @@
       "fg": "black",
       "font": [
         "tkDefaultFont",
-        25
+        17
       ]
     }
   }
