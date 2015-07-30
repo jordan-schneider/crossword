@@ -2,15 +2,6 @@ import puz
 from .constants import *
 
 
-def to_position(i: int, w: int) -> tuple:
-    y, x = divmod(i, w)
-    return x, y
-
-
-def to_index(x: int, y: int, w: int) -> int:
-    return y*w + x
-
-
 class CellModel:
     """Basic container class for a single crossword cell."""
 
@@ -22,13 +13,17 @@ class CellModel:
         self.kind = kind
         self.word = None
         self.solution = solution
-        # Set later on
+        # Changeable
         self.letters = ""
-        self.number = ""
         self.owner = None
-        self.fill = ""
+        # Constant
+        self.number = ""
+        self.fill = "white"
         # Drawing
-        self.drawings = []
+        self.drawings = type("CellDrawing", (), {})
+        self.drawings.box = None
+        self.drawings.number = None
+        self.drawings.letter = None
 
     def __repr__(self):
         return "(%i, %i)" % (self.x, self.y)
@@ -39,14 +34,22 @@ class CellsModel:
 
     def __init__(self, puzzle: puz.Puzzle):
         """Initialize a new cells container."""
+        self._width = puzzle.width
         self.cells = []
         zipped = list(zip(puzzle.fill, puzzle.solution))
         for y, row in enumerate(zipped[i:i+puzzle.width] for i in range(0, len(zipped), puzzle.width)):
-            self.cells.append([CellModel(x, y, kind, solution) for x, (kind, solution) in enumerate(row)])
+            for x, (kind, solution) in enumerate(row):
+                self.cells.append(CellModel(x, y, kind, solution))
 
     def __getitem__(self, position: tuple):
         """Get a cell with its coordinate position."""
-        return self.cells[position[1]][position[0]]
+        if isinstance(position, int):
+            return self.cells[position]
+        elif isinstance(position, tuple) and len(position) == 2:
+            return self.cells[to_index(position[1], position[0], self._width)]
+
+    def __iter__(self):
+        return iter(self.cells)
 
 
 class WordModel:
@@ -93,6 +96,9 @@ class WordsModel:
             # Add the word to the lists
             self.words.append(word)
             self.down.append(word)
+
+    def __iter__(self):
+        return self.words
 
 
 class PuzzleModel:

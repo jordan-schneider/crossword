@@ -1,5 +1,7 @@
 from . import view as _view
 from . import model as _model
+from . import settings
+from .constants import *
 
 
 class Controller:
@@ -7,12 +9,12 @@ class Controller:
     def __init__(self):
         self.view = _view.View()
         self.model = None
-        self.crossword = HeaderController(self)
+        self.header = HeaderController(self)
         self.puzzle = PuzzleController(self)
         self.clues = CluesController(self)
 
     def reload(self):
-        self.crossword.reload()
+        self.header.reload()
         self.puzzle.reload()
         self.clues.reload()
 
@@ -28,6 +30,10 @@ class SubController:
 
     def __init__(self, parent: Controller):
         self.parent = parent
+
+    @property  # This is a property because the model is not permanent
+    def model(self):
+        return self.parent.model
 
     def reload(self):
         pass
@@ -51,9 +57,15 @@ class PuzzleController(SubController):
         self.view = self.parent.view.puzzle
 
     def reload(self):
-        for y, row in enumerate(self.parent.model.cells):
-            for x in enumerate(row):
-                pass
+        for cell in self.model.cells:
+            view = self.view.cells[cell.x, cell.y]
+            if cell.kind is EMPTY:
+                view.update(fill=settings.get("board:fill:empty"))
+            elif cell.kind is LETTER:
+                view.update(fill=settings.get("board:fill:default"))
+                view.update(letters=cell.solution)
+                view.update(number=cell.number)
+
 
 class CluesController(SubController):
 
@@ -62,5 +74,5 @@ class CluesController(SubController):
         self.view = self.parent.view.clues
 
     def reload(self):
-        self.view.set(list(map(lambda word: word.clue, self.parent.model.words.across)))
-        self.view.set(list(map(lambda word: word.clue, self.parent.model.words.down)))
+        self.view.across.set(list(map(lambda word: word.clue, self.parent.model.words.across)))
+        self.view.down.set(list(map(lambda word: word.clue, self.parent.model.words.down)))

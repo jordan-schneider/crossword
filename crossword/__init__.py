@@ -12,5 +12,6 @@ def main():
     m = model.PuzzleModel(puzzle)
 
     c = controller.Controller()
-    c.load_puzzle(m)
+    c.view.root.update()
+    c.load(m)
     c.main()

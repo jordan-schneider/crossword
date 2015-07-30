@@ -8,7 +8,8 @@
       "incorrect": "red",
       "selected": "light blue",
       "selected-letter": "yellow"
-    }
+    },
+    "font-family": "tkDefaultFont"
   },
   "controls": {
     "on-double-arrow-key": [
