@@ -10,6 +10,7 @@ class PlayerMetrics:
         self.color = color
         # Crossword letters
         self.letters_total = 0
+        self.letters_replaced = 0
         self.letters_final = 0
         # Chat data
         self.chat_entries = 0

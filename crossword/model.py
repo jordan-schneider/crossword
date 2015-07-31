@@ -11,7 +11,8 @@ class CellModel:
         self.x = x
         self.y = y
         self.kind = kind
-        self.word = None
+        self.across = None
+        self.down = None
         self.solution = solution
         # Changeable
         self.letters = ""
@@ -25,8 +26,9 @@ class CellModel:
         self.drawings.number = None
         self.drawings.letter = None
 
-    def __repr__(self):
-        return "(%i, %i)" % (self.x, self.y)
+    @property
+    def color(self):
+        return "" if not self.owner else self.owner.color
 
 
 class CellsModel:
@@ -41,7 +43,7 @@ class CellsModel:
             for x, (kind, solution) in enumerate(row):
                 self.cells.append(CellModel(x, y, kind, solution))
 
-    def __getitem__(self, position: tuple):
+    def __getitem__(self, position: (int, tuple)):
         """Get a cell with its coordinate position."""
         if isinstance(position, int):
             return self.cells[position]
@@ -61,7 +63,16 @@ class WordModel:
         self.direction = direction
         self.number = number
         self.clue = clue
-        self.cells = None
+        self.cells = []
+
+    @property
+    def fill(self):
+        return None
+
+    @fill.setter
+    def fill(self, value):
+        for cell in self.cells:
+            cell.fill = value
 
 
 class WordsModel:
@@ -81,7 +92,7 @@ class WordsModel:
             # Link the word and cells
             word.cells = linked
             for cell in linked:
-                cell.word = word
+                cell.across = word
             word.cells[0].number = word.number
             # Add the word to the lists
             self.words.append(word)
@@ -93,7 +104,7 @@ class WordsModel:
             # Link the word and cells
             word.cells = linked
             for cell in linked:
-                cell.word = word
+                cell.down = word
             word.cells[0].number = word.number
             # Add the word to the lists
             self.words.append(word)

@@ -190,7 +190,7 @@ class CellView:
         self.root = self.parent.root
         self.canvas = self.parent.canvas
         # Content variables
-        self.color = "black"
+        self.color = ""
         self.fill = "white"
         self.letters = ""
         self.number = ""
@@ -208,7 +208,7 @@ class CellView:
         if self.letters:
             h = s // 2 + 1
             pos = (self.x*s + h, self.y*s + h)
-            font = (settings.get("board:font-family"), int(s / (1.2 + 0.6*len(self.letters)))-3)
+            font = (settings.get("board:font-family"), int(s / (1.1 + 0.6*len(self.letters)))-3)
             self.letters_id = self.canvas.create_text(*pos, text=self.letters, font=font, fill=self.color)
         if self.number:
             pos = (self.x*s + NUMBER_LEFT, self.y*s + NUMBER_TOP)
