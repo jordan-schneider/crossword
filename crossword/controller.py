@@ -115,6 +115,9 @@ class PuzzleController(SubController):
             return
         # Change direction if the clicked cell is selected
         if cell == self.current:
+            word = self.current.word[self.player.direction]
+            word.fill = settings.get("board:fill:default")
+            self.draw(word)
             self.player.direction = [ACROSS, DOWN][self.player.direction == ACROSS]
         # Select the cell
         self.select_cell(cell)
@@ -123,6 +126,9 @@ class PuzzleController(SubController):
         # If the key is a backspace
         if event.keysym == "BackSpace":
             self.remove_letter()
+        # If the key is a space
+        if event.keysym == "Space":
+            self.move_current()
         # If the key is a letter
         if event.keysym in string.ascii_letters:
             self.insert_letter(event.keysym)
@@ -144,8 +150,36 @@ class PuzzleController(SubController):
         # Set the current selection
         self.current = cell
 
-    def move_current(self, distance=1, absolute=True):
-        pass
+    def move_current(self, distance=1, absolute=False):
+        # Set constants for access
+        step = -1 if distance < 0 else 1
+        across = self.player.direction == ACROSS
+        down = self.player.direction == DOWN
+        x, y = self.current.x, self.current.y
+        # Move while not complete
+        while distance != 0:
+            x += step * across
+            y += step * down
+            # Fix bound issues
+            while not (0 <= x < self.model.width and 0 <= y < self.model.height):
+                # Bounding rules
+                if x < 0:
+                    x = self.model.width - 1
+                    y = (y - (not absolute)) % self.model.height
+                elif x >= self.model.width:
+                    x = 0
+                    y = (y + (not absolute)) % self.model.height
+                elif y < 0:
+                    y = self.model.height - 1
+                    x = (x - (not absolute)) % self.model.width
+                elif y >= self.model.height:
+                    y = 0
+                    x = (x + (not absolute)) % self.model.width
+            # Subtract the step if the new cell is a letter cell
+            if self.model.cells[x, y].kind == LETTER:
+                distance -= step
+        # Select a new cell
+        self.select_cell(self.model.cells[x, y])
 
     def next_word(self, count=1):
         pass
@@ -156,9 +190,11 @@ class PuzzleController(SubController):
             self.current.owner = self.player
             if letter in string.ascii_lowercase:
                 self.current.letters = letter.upper()
+                self.draw(self.current)
+                self.move_current(absolute=False)
             elif letter in string.ascii_uppercase:
                 self.current.letters += letter.upper()
-            self.draw(self.current)
+                self.draw(self.current)
 
     def remove_letter(self):
         # If there is a current cell
