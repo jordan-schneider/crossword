@@ -70,7 +70,15 @@ class PuzzleController(SubController):
         self.current = None
         # Bindings
         self.view.canvas.bind("<Button-1>", self.on_left_click)
+        self.view.canvas.bind("<BackSpace>", self.on_backspace)
+        self.view.canvas.bind("<space>", self.on_space)
+        self.view.canvas.bind("<Tab>", self.on_tab)
+        self.view.canvas.bind("<Left>", self.on_arrow)
+        self.view.canvas.bind("<Right>", self.on_arrow)
+        self.view.canvas.bind("<Up>", self.on_arrow)
+        self.view.canvas.bind("<Down>", self.on_arrow)
         self.view.canvas.bind("<Key>", self.on_key)
+        self.view.canvas.focus_set()
 
     def load(self):
         d = settings.get("board:fill:default")
@@ -78,6 +86,7 @@ class PuzzleController(SubController):
         for cell in self.model.cells:
             cell.fill = d if cell.kind == LETTER else e
             self.draw(cell)
+        self.select_cell(self.model.cells[0, 0])
 
     def draw(self, model: (_model.CellModel, _model.WordModel)):
         if isinstance(model, _model.CellModel):
@@ -115,23 +124,54 @@ class PuzzleController(SubController):
             return
         # Change direction if the clicked cell is selected
         if cell == self.current:
+            self.switch_direction()
+        # Select the cell
+        self.select_cell(cell)
+
+    def on_backspace(self, event):
+        self.remove_letter()
+        if settings.get("controls:on-backspace")[0] == "go to last cell":
+            self.move_current(-1)
+
+    def on_space(self, event):
+        on_space = settings.get("controls:on-space")[0]
+        if on_space == "go to next cell":
+            self.move_current()
+        elif on_space == "change direction":
+            self.switch_direction()
+
+    def on_tab(self, event):
+        word = self.current.word[self.player.direction]
+        while self.current.word[self.player.direction] == word:
+            self.move_current()
+        return "break"
+
+    def on_arrow(self, event):
+        on_arrow_key = settings.get("controls:on-arrow")[0]
+        arrow_key_movement = settings.get("controls:arrow-movement")
+        direction = ACROSS if event.keysym in ACROSS_ARROWS else DOWN
+        distance = -1 if event.keysym in NEGATIVE_ARROWS else 1
+        if self.player.direction != direction:
+            self.switch_direction()
+            if on_arrow_key == "switch direction and move":
+                self.move_current(distance=distance, absolute=arrow_key_movement == "absolute")
+        elif on_arrow_key == "switch direction before moving":
+            self.move_current(distance=distance, absolute=arrow_key_movement == "absolute")
+
+    def on_key(self, event):
+        # If the key is a letter
+        if event.keysym in string.ascii_letters:
+            self.insert_letter(event.keysym)
+            if event.keysym in string.ascii_lowercase:
+                self.move_current()
+
+    def switch_direction(self):
+        if self.current:
             word = self.current.word[self.player.direction]
             word.fill = settings.get("board:fill:default")
             self.draw(word)
             self.player.direction = [ACROSS, DOWN][self.player.direction == ACROSS]
-        # Select the cell
-        self.select_cell(cell)
-
-    def on_key(self, event):
-        # If the key is a backspace
-        if event.keysym == "BackSpace":
-            self.remove_letter()
-        # If the key is a space
-        if event.keysym == "Space":
-            self.move_current()
-        # If the key is a letter
-        if event.keysym in string.ascii_letters:
-            self.insert_letter(event.keysym)
+            self.select_cell(self.current)
 
     def select_cell(self, cell: _model.CellModel):
         # Ignore if the cell is empty
@@ -188,19 +228,20 @@ class PuzzleController(SubController):
         # If there is a current cell
         if self.current:
             self.current.owner = self.player
-            if letter in string.ascii_lowercase:
+            if letter == " ":
+                self.current.letters = ""
+            elif letter in string.ascii_lowercase:
                 self.current.letters = letter.upper()
-                self.draw(self.current)
-                self.move_current(absolute=False)
             elif letter in string.ascii_uppercase:
                 self.current.letters += letter.upper()
-                self.draw(self.current)
+            self.draw(self.current)
 
     def remove_letter(self):
         # If there is a current cell
         if self.current:
             self.current.letters = self.current.letters[:-1]
             self.draw(self.current)
+
 
 class CluesController(SubController):
 

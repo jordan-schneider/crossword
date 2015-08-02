@@ -12,14 +12,14 @@
     "font-family": "tkDefaultFont"
   },
   "controls": {
-    "arrow-key-movement": [
+    "arrow-movement": [
       "absolute",
       "interpreted"
     ],
-    "on-arrow-key": [
-      "only change direction",
-      "change direction before moving",
-      "change direction and move"
+    "on-arrow": [
+      "switch direction before moving",
+      "only switch direction",
+      "switch direction and move"
     ],
     "on-return": [
       "go to next word",
@@ -34,13 +34,16 @@
       "go to first cell",
       "stay in cell"
     ],
-    "on-space-key": [
-      "clear and skip",
-      "change direction"
+    "on-space": [
+      "go to next cell",
+      "switch direction"
     ],
-    "on-tab-key": [
-      "go to next word",
-      "change direction"
+    "on-tab": [
+      "go to next word"
+    ],
+    "on-backspace": [
+      "go to last cell",
+      "stay in cell"
     ]
   },
   "style": {

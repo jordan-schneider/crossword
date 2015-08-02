@@ -56,6 +56,11 @@ LETTER = "-"
 EMPTY = "."
 DOWN = "down"
 ACROSS = "across"
+ALL_ARROWS = ("Left", "Right", "Up", "Down")
+ACROSS_ARROWS = ("Left", "Right")
+DOWN_ARROWS = ("Up", "Down")
+NEGATIVE_ARROWS = ("Left", "Up")
+POSITIVE_ARROWS = ("Right", "Down")
 
 # Network
 SERVER = "server"
@@ -64,4 +69,7 @@ PLAYER = "player"
 SPECTATOR = "spectator"
 
 # Event bindings
-BUTTON_2 = "<Button-3>" if platform.system() == "Windows" else "<Button-2>"
+if platform.system() == "Windows":
+    BUTTON_2 = "<Button-3>"
+else:
+    BUTTON_2 = "<Button-2>"
