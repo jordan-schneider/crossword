@@ -64,5 +64,4 @@ PLAYER = "player"
 SPECTATOR = "spectator"
 
 # Event bindings
-BUTTON_1 = "<Button-1>"
 BUTTON_2 = "<Button-3>" if platform.system() == "Windows" else "<Button-2>"

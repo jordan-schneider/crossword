@@ -12,28 +12,35 @@
     "font-family": "tkDefaultFont"
   },
   "controls": {
-    "on-double-arrow-key": [
-      "move in direction",
+    "arrow-key-movement": [
+      "absolute",
+      "interpreted"
+    ],
+    "on-arrow-key": [
+      "only change direction",
+      "change direction before moving",
+      "change direction and move"
+    ],
+    "on-return": [
+      "go to next word",
       "stay in cell"
     ],
-    "on-enter-key": [
-      "next word"
+    "on-filled-cell": [
+      "skip cell",
+      "stay in cell"
     ],
-    "on-filled-letter": [
-      "skip",
-      "stay"
-    ],
-    "on-last-letter-go-to": [
-      "next word",
-      "first cell",
-      "same cell"
+    "on-last-letter": [
+      "go to next word",
+      "go to first cell",
+      "stay in cell"
     ],
     "on-space-key": [
       "clear and skip",
       "change direction"
     ],
     "on-tab-key": [
-      "next word"
+      "go to next word",
+      "change direction"
     ]
   },
   "style": {

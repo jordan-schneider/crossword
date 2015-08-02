@@ -1,4 +1,5 @@
 import tkinter as tk
+import string
 from . import view as _view
 from . import model as _model
 from . import settings
@@ -68,7 +69,8 @@ class PuzzleController(SubController):
         # Reference
         self.current = None
         # Bindings
-        self.view.canvas.bind(BUTTON_1, self.on_left_click)
+        self.view.canvas.bind("<Button-1>", self.on_left_click)
+        self.view.canvas.bind("<Key>", self.on_key)
 
     def load(self):
         d = settings.get("board:fill:default")
@@ -101,24 +103,68 @@ class PuzzleController(SubController):
                 self.draw(cell)
 
     def on_left_click(self, event):
+        # Get focus
         self.view.canvas.focus_set()
-        if self.current:
-            word = self.current.word[self.player.direction]
-            word.fill = settings.get("board:fill:default")
-            self.draw(word)
+        # Efficiently access instance members
         s = settings.get("board:cell-size")
         x = (event.x - CANVAS_PAD - 1) // s
         y = (event.y - CANVAS_PAD - 1) // s
         cell = self.model.cells[x, y]
-        if cell == self.current:
-            self.player.direction = [ACROSS, DOWN][self.player.direction == ACROSS]
+        # Ignore if the cell is empty
         if cell.kind == EMPTY:
             return
+        # Change direction if the clicked cell is selected
+        if cell == self.current:
+            self.player.direction = [ACROSS, DOWN][self.player.direction == ACROSS]
+        # Select the cell
+        self.select_cell(cell)
+
+    def on_key(self, event):
+        # If the key is a backspace
+        if event.keysym == "BackSpace":
+            self.remove_letter()
+        # If the key is a letter
+        if event.keysym in string.ascii_letters:
+            self.insert_letter(event.keysym)
+
+    def select_cell(self, cell: _model.CellModel):
+        # Ignore if the cell is empty
+        if cell.kind == EMPTY:
+            raise TypeError("Cannot select an empty cell")
+        # If there is a selection, clear it
+        if self.current:
+            word = self.current.word[self.player.direction]
+            word.fill = settings.get("board:fill:default")
+            self.draw(word)
+        # Change the fill of the word and selected cell
         cell.word[self.player.direction].fill = settings.get("board:fill:selected")
         cell.fill = settings.get("board:fill:selected-letter")
+        # Draw the word
         self.draw(cell.word[self.player.direction])
+        # Set the current selection
         self.current = cell
 
+    def move_current(self, distance=1, absolute=True):
+        pass
+
+    def next_word(self, count=1):
+        pass
+
+    def insert_letter(self, letter: str):
+        # If there is a current cell
+        if self.current:
+            self.current.owner = self.player
+            if letter in string.ascii_lowercase:
+                self.current.letters = letter.upper()
+            elif letter in string.ascii_uppercase:
+                self.current.letters += letter.upper()
+            self.draw(self.current)
+
+    def remove_letter(self):
+        # If there is a current cell
+        if self.current:
+            self.current.letters = self.current.letters[:-1]
+            self.draw(self.current)
 
 class CluesController(SubController):
 
