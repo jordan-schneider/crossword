@@ -16,6 +16,20 @@ class DrawingsModel:
         return iter([item for item in self._ if item is not None])
 
 
+class DualWordAccess:
+    """Easy access to cell words."""
+
+    def __init__(self):
+        self.across = None
+        self.down = None
+
+    def __getitem__(self, key):
+        return self.__getattribute__(key)
+
+    def __setitem__(self, key, value):
+        return self.__setattr__(key, value)
+
+
 class CellModel:
     """Basic container class for a single crossword cell."""
 
@@ -25,8 +39,7 @@ class CellModel:
         self.x = x
         self.y = y
         self.kind = kind
-        self.across = None
-        self.down = None
+        self.word = DualWordAccess()
         self.solution = solution
         # Changeable
         self.letters = ""
@@ -40,13 +53,12 @@ class CellModel:
         self.drawings.number = None
         self.drawings.letter = None
 
-
     @property
     def color(self):
         return "" if not self.owner else self.owner.color
 
 
-class CellsModel:
+class CellsAccess:
     """Basic matrix-like container for a crossword board's cells."""
 
     def __init__(self, puzzle: puz.Puzzle):
@@ -90,10 +102,10 @@ class WordModel:
             cell.fill = value
 
 
-class WordsModel:
+class WordsAccess:
     """Basic container for a list of words."""
 
-    def __init__(self, puzzle: puz.Puzzle, cells: CellsModel):
+    def __init__(self, puzzle: puz.Puzzle, cells: CellsAccess):
         """Initialize a new words container."""
         self.words = []
         self.across = []
@@ -107,7 +119,7 @@ class WordsModel:
             # Link the word and cells
             word.cells = linked
             for cell in linked:
-                cell.across = word
+                cell.word.across = word
             word.cells[0].number = word.number
             # Add the word to the lists
             self.words.append(word)
@@ -119,7 +131,7 @@ class WordsModel:
             # Link the word and cells
             word.cells = linked
             for cell in linked:
-                cell.down = word
+                cell.word.down = word
             word.cells[0].number = word.number
             # Add the word to the lists
             self.words.append(word)
@@ -144,15 +156,16 @@ class PuzzleModel:
         self.height = puzzle.height
         self.version = puzzle.version
         # Cells and words
-        self.cells = CellsModel(puzzle)
-        self.words = WordsModel(puzzle, self.cells)
+        self.cells = CellsAccess(puzzle)
+        self.words = WordsAccess(puzzle, self.cells)
 
 
-class ProfileModel:
+class PlayerModel:
     """Basic player profile model for use on the client side."""
 
     def __init__(self, name: str, color: str):
         """Initialize a player profile model."""
         self.name = name
         self.color = color
+        self.direction = ACROSS
 

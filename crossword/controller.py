@@ -10,6 +10,7 @@ class Controller:
     def __init__(self):
         self.view = _view.View()
         self.model = None
+        self.player = _model.PlayerModel("Test", "Black")
         self.header = HeaderController(self)
         self.puzzle = PuzzleController(self)
         self.clues = CluesController(self)
@@ -37,6 +38,10 @@ class SubController:
     @property  # This is a property because the model is not permanent
     def model(self):
         return self.parent.model
+
+    @property  # This is a property because I'm unsure of how it will work
+    def player(self):
+        return self.parent.player
 
     def reload(self):
         pass
@@ -98,17 +103,20 @@ class PuzzleController(SubController):
     def on_left_click(self, event):
         self.view.canvas.focus_set()
         if self.current:
-            self.current.across.fill = settings.get("board:fill:default")
-            self.draw(self.current.across)
+            word = self.current.word[self.player.direction]
+            word.fill = settings.get("board:fill:default")
+            self.draw(word)
         s = settings.get("board:cell-size")
         x = (event.x - CANVAS_PAD - 1) // s
         y = (event.y - CANVAS_PAD - 1) // s
         cell = self.model.cells[x, y]
+        if cell == self.current:
+            self.player.direction = [ACROSS, DOWN][self.player.direction == ACROSS]
         if cell.kind == EMPTY:
             return
-        cell.across.fill = settings.get("board:fill:selected")
+        cell.word[self.player.direction].fill = settings.get("board:fill:selected")
         cell.fill = settings.get("board:fill:selected-letter")
-        self.draw(cell.across)
+        self.draw(cell.word[self.player.direction])
         self.current = cell
 
 
