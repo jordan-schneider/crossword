@@ -1,3 +1,4 @@
+import tkinter as tk
 from . import view as _view
 from . import model as _model
 from . import settings
@@ -69,26 +70,36 @@ class PuzzleController(SubController):
         e = settings.get("board:fill:empty")
         for cell in self.model.cells:
             cell.fill = d if cell.kind == LETTER else e
-        self.reload()
+            self.draw(cell)
 
-    def reload(self, individual=None):
-        if isinstance(individual, _model.WordModel):
-            cells = individual.cells
-        elif isinstance(individual, _model.CellModel):
-            cells = [individual]
-        elif individual is None:
-            cells = self.model.cells
-        else:
-            raise TypeError("Can only reload a cell or word, not %s" % repr(individual))
-        for cell in cells:
-            view = self.view.cells[cell.x, cell.y]
-            view.update(color=cell.color, fill=cell.fill, letters=cell.letters, number=cell.number)
+    def draw(self, model: (_model.CellModel, _model.WordModel)):
+        if isinstance(model, _model.CellModel):
+            self.view.canvas.delete(*list(model.drawings))
+            x, y = model.x, model.y
+            s = settings.get("board:cell-size")
+            bbox = (x*s, y*s, (x+1)*s, (y+1)*s)
+            model.drawings.box = self.view.canvas.create_rectangle(*bbox, fill=model.fill)
+            if model.letters:
+                h = s // 2 + 1
+                pos = (x*s + h, y*s + h)
+                letters = model.letters
+                font = (settings.get("board:font-family"), int(s / (1.1 + 0.6*len(model.letters)))-3)
+                color = model.color
+                model.drawings.letters = self.view.canvas.create_text(*pos, text=letters, font=font, fill=color)
+            if model.number:
+                pos = (x*s + NUMBER_LEFT, y*s + NUMBER_TOP)
+                number = model.number
+                font = (settings.get("board:font-family"), int(s / 3.5)-2)
+                model.drawings.number = self.view.canvas.create_text(*pos, text=number, font=font, anchor=tk.W)
+        elif isinstance(model, _model.WordModel):
+            for cell in model.cells:
+                self.draw(cell)
 
     def on_left_click(self, event):
         self.view.canvas.focus_set()
         if self.current:
             self.current.across.fill = settings.get("board:fill:default")
-            self.reload(self.current.across)
+            self.draw(self.current.across)
         s = settings.get("board:cell-size")
         x = (event.x - CANVAS_PAD - 1) // s
         y = (event.y - CANVAS_PAD - 1) // s
@@ -97,7 +108,7 @@ class PuzzleController(SubController):
             return
         cell.across.fill = settings.get("board:fill:selected")
         cell.fill = settings.get("board:fill:selected-letter")
-        self.reload(cell.across)
+        self.draw(cell.across)
         self.current = cell
 
 

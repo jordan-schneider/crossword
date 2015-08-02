@@ -2,6 +2,20 @@ import puz
 from .constants import *
 
 
+class DrawingsModel:
+    """Basic container class for a canvas drawing group."""
+
+    def __init__(self):
+        self._ = []
+
+    def __setattr__(self, key, value):
+        super().__setattr__(key, value)
+        self._.append(key)
+
+    def __iter__(self):
+        return iter([item for item in self._ if item is not None])
+
+
 class CellModel:
     """Basic container class for a single crossword cell."""
 
@@ -21,10 +35,11 @@ class CellModel:
         self.number = ""
         self.fill = "white"
         # Drawing
-        self.drawings = type("CellDrawing", (), {})
+        self.drawings = DrawingsModel()
         self.drawings.box = None
         self.drawings.number = None
         self.drawings.letter = None
+
 
     @property
     def color(self):
@@ -48,7 +63,7 @@ class CellsModel:
         if isinstance(position, int):
             return self.cells[position]
         elif isinstance(position, tuple) and len(position) == 2:
-            return self.cells[to_index(position[1], position[0], self._width)]
+            return self.cells[to_index(position[0], position[1], self._width)]
 
     def __iter__(self):
         return iter(self.cells)
