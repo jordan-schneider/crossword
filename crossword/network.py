@@ -1,9 +1,11 @@
 from .constants import *
 
+
 class Connection:
 
     def __init__(self, address, mode=CLIENT):
-        pass
+        self.address = address
+        self.mode = mode
 
     def emit(self):
         pass
