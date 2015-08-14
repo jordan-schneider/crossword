@@ -10,7 +10,7 @@ class Connection:
     def emit(self):
         pass
 
-    def bind(self, hook):
+    def bind(self, event, hook):
         pass
 
     def main(self):
