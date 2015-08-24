@@ -139,7 +139,7 @@ class PuzzleController(SubController):
         self.player.direction = [ACROSS, DOWN][self.player.direction == ACROSS]
         self.draw(self.player)
 
-    def move_current(self, distance=1, absolute=False):
+    def move_cell(self, distance=1, absolute=False):
         # Set constants for access
         step = -1 if distance < 0 else 1
         across = self.player.direction == ACROSS
@@ -171,8 +171,12 @@ class PuzzleController(SubController):
         self.player.x, self.player.y = x, y
         self.draw(self.player)
 
-    def next_word(self, count=1):
-        pass
+    def move_word(self, count=1):
+        direction = self.player.direction
+        index = (self.model.words[direction].index(self.current.word[direction]) + 1) % len(self.model.words[direction])
+        cell = self.model.words[direction][index].cells[0]
+        self.player.x, self.player.y = cell.x, cell.y
+        self.draw(self.player)
 
     def insert_letter(self, letter: str):
         # If there is a current cell
@@ -213,19 +217,17 @@ class PuzzleController(SubController):
     def on_backspace(self, event):
         self.remove_letter()
         if settings.get("controls:on-backspace")[0] == "go to last cell":
-            self.move_current(-1)
+            self.move_cell(-1)
 
     def on_space(self, event):
         on_space = settings.get("controls:on-space")[0]
         if on_space == "go to next cell":
-            self.move_current()
+            self.move_cell()
         elif on_space == "change direction":
             self.switch_direction()
 
     def on_tab(self, event):
-        word = self.current.word[self.player.direction]
-        while self.current.word[self.player.direction] == word:
-            self.move_current()
+        self.move_word(1)
         return "break"
 
     def on_arrow(self, event):
@@ -236,16 +238,16 @@ class PuzzleController(SubController):
         if self.player.direction != direction:
             self.switch_direction()
             if on_arrow_key == "switch direction and move":
-                self.move_current(distance=distance, absolute=arrow_key_movement == "absolute")
+                self.move_cell(distance=distance, absolute=arrow_key_movement == "absolute")
         elif on_arrow_key == "switch direction before moving":
-            self.move_current(distance=distance, absolute=arrow_key_movement == "absolute")
+            self.move_cell(distance=distance, absolute=arrow_key_movement == "absolute")
 
     def on_key(self, event):
         # If the key is a letter
         if event.keysym in string.ascii_letters:
             self.insert_letter(event.keysym)
             if event.keysym in string.ascii_lowercase:
-                self.move_current()
+                self.move_cell()
 
 
 class CluesController(SubController):

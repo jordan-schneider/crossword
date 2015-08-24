@@ -3,7 +3,7 @@ import struct
 import queue
 import threading
 import pickle
-from .constants import *
+
 
 # Socket utility
 def send(sock: socket.socket, message: bytes):

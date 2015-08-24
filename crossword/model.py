@@ -24,10 +24,7 @@ class DualWordAccess:
         self.down = None
 
     def __getitem__(self, key):
-        return self.__getattribute__(key)
-
-    def __setitem__(self, key, value):
-        return self.__setattr__(key, value)
+        return {ACROSS: self.across, DOWN: self.down}[key]
 
 
 class CellModel:
@@ -139,6 +136,9 @@ class WordsAccess:
 
     def __iter__(self):
         return self.words
+
+    def __getitem__(self, key):
+        return {ACROSS: self.across, DOWN: self.down}[key]
 
 
 class PuzzleModel:
