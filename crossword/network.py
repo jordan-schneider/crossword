@@ -3,11 +3,12 @@ import struct
 import queue
 import threading
 import pickle
-
+from .constants import *
 
 # Socket utility
 def send(sock: socket.socket, message: bytes):
     """Pack the message length and content for sending larger messages."""
+    print("send size", len(message))
     message = struct.pack('>I', len(message)) + message
     sock.sendall(message)
 
@@ -15,9 +16,8 @@ def send(sock: socket.socket, message: bytes):
 def recv(sock: socket.socket):
     """Read message length and receive the corresponding amount of data."""
     size = _recv(sock, 4)
-    if not size:
-        return None
     size = struct.unpack('>I', size)[0]
+    print("recv size", size)
     return _recv(sock, size)
 
 
@@ -27,7 +27,8 @@ def _recv(sock: socket.socket, size: int):
     while len(message) < size:
         packet = sock.recv(size - len(message))
         if not packet:
-            return None
+            sock.close()
+            raise OSError("Nothing else to read from socket")
         message += packet
     return message
 
@@ -50,41 +51,41 @@ class SocketServer:
 
         self.bind("echo", self.echo)
 
-        self._accept = threading.Thread(target=self.accept)
+        self._accept = threading.Thread(target=self.accept, daemon=True)
 
     def accept(self):
         while self.alive:
             try:
                 sock, address = self.sock.accept()
-                sock.setblocking(False)
                 handler = SocketHandler(sock, address, self)
                 handler.start()
                 self.handlers.append(handler)
             except Exception as e:
-                print(e)
+                print("server accept", e)
                 self.stop()
 
     def serve(self):
         while self.alive:
             try:
-                hook, data = self.queue.get()
-                function = self.bindings.get(hook)
+                event, data = self.queue.get()
+                function = self.bindings.get(event)
                 if function is None:
-                    print("caught hook %s with no binding" % hook)
+                    print("caught event %s with no binding" % event)
                 function(data)
             except Exception as e:
-                print(e)
+                print("server serve", e)
                 self.stop()
 
-    def emit(self, hook, data, *handlers):
+    def emit(self, event, data, *handlers):
         handlers = handlers or self.handlers
         for handler in handlers:
-            handler.emit(hook, data)
+            handler.emit(event, data)
 
-    def bind(self, hook, function):
-        self.bindings[hook] = function
+    def bind(self, event, function):
+        self.bindings[event] = function
 
     def echo(self, data):
+        print(data)
         self.emit("echo", data)
 
     def start(self):
@@ -106,21 +107,20 @@ class SocketHandler:
         self.server = server
         self.alive = False
 
-        self._receive = threading.Thread(target=self.receive)
+        self._receive = threading.Thread(target=self.receive, daemon=True)
 
     def receive(self):
         while self.alive:
             try:
-                hook, data = pickle.loads(recv(self.sock))
-                self.server.queue.put((hook, data))
-            except WindowsError:
-                pass
+                raw = recv(self.sock)
+                event, data = pickle.loads(raw)
+                self.server.queue.put((event, data))
             except Exception as e:
-                print(e)
+                print("handler receive", e)
                 self.stop()
 
-    def emit(self, hook, data):
-        send(self.sock, pickle.dumps((hook, data)))
+    def emit(self, event, data):
+        send(self.sock, pickle.dumps((event, data)))
 
     def start(self):
         self.alive = True
@@ -128,8 +128,8 @@ class SocketHandler:
 
     def stop(self):
         self.alive = False
-        self.server.handlers.remove(self)
-        print("removed handler")
+        if self in self.server.handlers:
+            self.server.handlers.remove(self)
 
 
 class SocketConnection:
@@ -142,19 +142,19 @@ class SocketConnection:
         self.sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         self.sock.connect(self.address)
 
-        self._receive = threading.Thread(target=self.receive)
+        self._receive = threading.Thread(target=self.receive, daemon=True)
 
     def receive(self):
         while self.alive:
             try:
-                hook, data = pickle.loads(recv(self.sock))
-                print(hook, data)
+                event, data = pickle.loads(recv(self.sock))
+                print(data)
             except Exception as e:
-                print(e)
+                print("connection receive", e)
                 self.stop()
 
-    def emit(self, hook, data):
-        send(self.sock, pickle.dumps((hook, data)))
+    def emit(self, event, data):
+        send(self.sock, pickle.dumps((event, data)))
 
     def start(self):
         self.alive = True
