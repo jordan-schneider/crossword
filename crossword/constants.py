@@ -68,6 +68,13 @@ CLIENT = "client"
 PLAYER = "player"
 SPECTATOR = "spectator"
 
+# Network messages
+CLIENT_JOINED = "client joined"
+CLIENT_EXITED = "client exited"
+CLIENT_NAMED = "client named"
+SERVER_STOPPED = "server stopped"
+SERVER_KICKED = "server kicked"
+
 # Event bindings
 if platform.system() == "Windows":
     BUTTON_2 = "<Button-3>"
