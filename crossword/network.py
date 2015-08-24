@@ -36,6 +36,8 @@ def _recv(sock: socket.socket, size: int):
 # Socket wrapper classes
 class SocketServer:
 
+    handler = SocketHandler
+
     def __init__(self, address):
         self.address = address
         self.alive = False
@@ -57,7 +59,7 @@ class SocketServer:
         while self.alive:
             try:
                 sock, address = self.sock.accept()
-                handler = SocketHandler(sock, address, self)
+                handler = self.handler(sock, address, self)
                 handler.start()
                 self.handlers.append(handler)
             except Exception as e:
@@ -67,7 +69,7 @@ class SocketServer:
     def serve(self):
         while self.alive:
             try:
-                event, data = self.queue.get()
+                event, data, handler = self.queue.get()
                 function = self.bindings.get(event)
                 if function is None:
                     print("caught event %s with no binding" % event)
@@ -84,9 +86,8 @@ class SocketServer:
     def bind(self, event, function):
         self.bindings[event] = function
 
-    def echo(self, data):
-        print(data)
-        self.emit("echo", data)
+    def echo(self, data, handler):
+        handler.emit("echo", data)
 
     def start(self):
         self.alive = True
@@ -112,9 +113,8 @@ class SocketHandler:
     def receive(self):
         while self.alive:
             try:
-                raw = recv(self.sock)
-                event, data = pickle.loads(raw)
-                self.server.queue.put((event, data))
+                event, data = pickle.loads(recv(self.sock))
+                self.server.queue.put((event, data, self))
             except Exception as e:
                 print("handler receive", e)
                 self.stop()
@@ -165,7 +165,11 @@ class SocketConnection:
 
 
 class CrosswordServer(SocketServer):
-    pass
+
+    handler = CrosswordHandler
+
+
+
 
 
 class CrosswordHandler(SocketHandler):

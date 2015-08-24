@@ -161,11 +161,14 @@ class PuzzleModel:
 
 
 class PlayerModel:
-    """Basic player profile model for use on the client side."""
+    """Basic player profile model."""
 
     def __init__(self, name: str, color: str):
         """Initialize a player profile model."""
         self.name = name
         self.color = color
         self.direction = ACROSS
+        self.x = 0
+        self.y = 0
+
 

@@ -86,9 +86,10 @@ class PuzzleController(SubController):
         for cell in self.model.cells:
             cell.fill = d if cell.kind == LETTER else e
             self.draw(cell)
-        self.select_cell(self.model.cells[0, 0])
+        self.player.x = self.player.y = 0
+        self.draw(self.player)
 
-    def draw(self, model: (_model.CellModel, _model.WordModel)):
+    def draw(self, model: (_model.CellModel, _model.WordModel, _model.PlayerModel), **options):
         if isinstance(model, _model.CellModel):
             self.view.canvas.delete(*list(model.drawings))
             x, y = model.x, model.y
@@ -110,6 +111,24 @@ class PuzzleController(SubController):
         elif isinstance(model, _model.WordModel):
             for cell in model.cells:
                 self.draw(cell)
+        elif isinstance(model, _model.PlayerModel):
+            # Ignore if the cell is empty
+            cell = self.model.cells[model.x, model.y]
+            if cell.kind == EMPTY:
+                raise TypeError("Cannot select an empty cell")
+            # If there is a selection, clear it
+            if self.current:
+                word = self.current.word[self.player.direction]
+                word.fill = settings.get("board:fill:default")
+                self.draw(word)
+            # Change the fill of the word and selected cell
+            if options.get("highlight") is not False:
+                cell.word[self.player.direction].fill = settings.get("board:fill:selected")
+                cell.fill = settings.get("board:fill:selected-letter")
+            # Draw the word
+            self.draw(cell.word[self.player.direction])
+            # Set the current selection
+            self.current = cell
 
     def on_left_click(self, event):
         # Get focus
@@ -126,7 +145,8 @@ class PuzzleController(SubController):
         if cell == self.current:
             self.switch_direction()
         # Select the cell
-        self.select_cell(cell)
+        self.player.x, self.player.y = x, y
+        self.draw(self.player)
 
     def on_backspace(self, event):
         self.remove_letter()
@@ -166,29 +186,11 @@ class PuzzleController(SubController):
                 self.move_current()
 
     def switch_direction(self):
-        if self.current:
-            word = self.current.word[self.player.direction]
-            word.fill = settings.get("board:fill:default")
-            self.draw(word)
-            self.player.direction = [ACROSS, DOWN][self.player.direction == ACROSS]
-            self.select_cell(self.current)
-
-    def select_cell(self, cell: _model.CellModel):
-        # Ignore if the cell is empty
-        if cell.kind == EMPTY:
-            raise TypeError("Cannot select an empty cell")
-        # If there is a selection, clear it
-        if self.current:
-            word = self.current.word[self.player.direction]
-            word.fill = settings.get("board:fill:default")
-            self.draw(word)
-        # Change the fill of the word and selected cell
-        cell.word[self.player.direction].fill = settings.get("board:fill:selected")
-        cell.fill = settings.get("board:fill:selected-letter")
-        # Draw the word
-        self.draw(cell.word[self.player.direction])
-        # Set the current selection
-        self.current = cell
+        word = self.current.word[self.player.direction]
+        word.fill = settings.get("board:fill:default")
+        self.draw(word)
+        self.player.direction = [ACROSS, DOWN][self.player.direction == ACROSS]
+        self.draw(self.player)
 
     def move_current(self, distance=1, absolute=False):
         # Set constants for access
@@ -219,7 +221,8 @@ class PuzzleController(SubController):
             if self.model.cells[x, y].kind == LETTER:
                 distance -= step
         # Select a new cell
-        self.select_cell(self.model.cells[x, y])
+        self.player.x, self.player.y = x, y
+        self.draw(self.player)
 
     def next_word(self, count=1):
         pass
