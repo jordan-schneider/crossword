@@ -55,8 +55,8 @@ class HeaderController(SubController):
         self.view = self.parent.view.header
 
     def load(self):
-        self.view.title.set(self.parent.model.title)
-        self.view.author.set(self.parent.model.author)
+        self.view.title.set(self.model.title)
+        self.view.author.set(self.model.author)
 
     reload = load
 
@@ -73,6 +73,7 @@ class PuzzleController(SubController):
         self.view.canvas.bind("<BackSpace>", self.on_backspace)
         self.view.canvas.bind("<space>", self.on_space)
         self.view.canvas.bind("<Tab>", self.on_tab)
+        self.view.canvas.bind("<Shift-Tab>", self.on_shift_tab)
         self.view.canvas.bind("<Left>", self.on_arrow)
         self.view.canvas.bind("<Right>", self.on_arrow)
         self.view.canvas.bind("<Up>", self.on_arrow)
@@ -88,6 +89,7 @@ class PuzzleController(SubController):
             self.draw(cell)
         self.player.x = self.player.y = 0
         self.draw(self.player)
+        self.parent.clues.select(self.current.word[self.player.direction])
 
     reload = load
 
@@ -138,6 +140,7 @@ class PuzzleController(SubController):
         self.draw(word)
         self.player.direction = [ACROSS, DOWN][self.player.direction == ACROSS]
         self.draw(self.player)
+        self.parent.clues.select(self.current.word[self.player.direction])
 
     def move_cell(self, distance=1, absolute=False):
         # Set constants for access
@@ -170,13 +173,16 @@ class PuzzleController(SubController):
         # Select a new cell
         self.player.x, self.player.y = x, y
         self.draw(self.player)
+        self.parent.clues.select(self.current.word[self.player.direction])
 
     def move_word(self, count=1):
         direction = self.player.direction
-        index = (self.model.words[direction].index(self.current.word[direction]) + 1) % len(self.model.words[direction])
+        index = (self.model.words[direction].index(self.current.word[direction]) + count)
+        index %= len(self.model.words[direction])
         cell = self.model.words[direction][index].cells[0]
         self.player.x, self.player.y = cell.x, cell.y
         self.draw(self.player)
+        self.parent.clues.select(self.current.word[self.player.direction])
 
     def insert_letter(self, letter: str):
         # If there is a current cell
@@ -189,12 +195,14 @@ class PuzzleController(SubController):
             elif letter in string.ascii_uppercase:
                 self.current.letters += letter.upper()
             self.draw(self.current)
+            self.parent.clues.select(self.current.word[self.player.direction])
 
     def remove_letter(self):
         # If there is a current cell
         if self.current:
             self.current.letters = self.current.letters[:-1]
             self.draw(self.current)
+            self.parent.clues.select(self.current.word[self.player.direction])
 
     def on_left_click(self, event):
         # Get focus
@@ -213,6 +221,7 @@ class PuzzleController(SubController):
         # Select the cell
         self.player.x, self.player.y = x, y
         self.draw(self.player)
+        self.parent.clues.select(self.current.word[self.player.direction])
 
     def on_backspace(self, event):
         self.remove_letter()
@@ -228,6 +237,10 @@ class PuzzleController(SubController):
 
     def on_tab(self, event):
         self.move_word(1)
+        return "break"
+
+    def on_shift_tab(self, event):
+        self.move_word(-1)
         return "break"
 
     def on_arrow(self, event):
@@ -257,7 +270,13 @@ class CluesController(SubController):
         self.view = self.parent.view.clues
 
     def load(self):
-        self.view.across.set(list(map(lambda word: word.clue, self.parent.model.words.across)))
-        self.view.down.set(list(map(lambda word: word.clue, self.parent.model.words.down)))
+        self.view.across.set(list(map(lambda word: word.clue, self.model.words.across)))
+        self.view.down.set(list(map(lambda word: word.clue, self.model.words.down)))
+
+    def select(self, word):
+        if word in self.model.words.across:
+            self.view.across_listbox.selection_set(self.model.words.across.index(word))
+        else:
+            self.view.down_listbox.selection_set(self.model.words.down.index(word))
 
     reload = load

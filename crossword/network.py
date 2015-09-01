@@ -3,6 +3,7 @@ import struct
 import queue
 import threading
 import pickle
+from . import model
 
 
 # Socket utility
@@ -34,6 +35,38 @@ def _recv(sock: socket.socket, size: int):
 
 
 # Socket wrapper classes
+class SocketHandler:
+
+    def __init__(self, sock, address, server):
+        self.sock = sock
+        self.address = address
+        self.server = server
+        self.alive = False
+
+        self._receive = threading.Thread(target=self.receive, daemon=True)
+
+    def receive(self):
+        while self.alive:
+            try:
+                event, data = pickle.loads(recv(self.sock))
+                self.server.queue.put((event, data, self))
+            except Exception as e:
+                print("handler receive", e)
+                self.stop()
+
+    def emit(self, event, data):
+        send(self.sock, pickle.dumps((event, data)))
+
+    def start(self):
+        self.alive = True
+        self._receive.start()
+
+    def stop(self):
+        self.alive = False
+        if self in self.server.handlers:
+            self.server.handlers.remove(self)
+
+
 class SocketServer:
 
     handler = SocketHandler
@@ -100,38 +133,6 @@ class SocketServer:
             handler.stop()
 
 
-class SocketHandler:
-
-    def __init__(self, sock, address, server):
-        self.sock = sock
-        self.address = address
-        self.server = server
-        self.alive = False
-
-        self._receive = threading.Thread(target=self.receive, daemon=True)
-
-    def receive(self):
-        while self.alive:
-            try:
-                event, data = pickle.loads(recv(self.sock))
-                self.server.queue.put((event, data, self))
-            except Exception as e:
-                print("handler receive", e)
-                self.stop()
-
-    def emit(self, event, data):
-        send(self.sock, pickle.dumps((event, data)))
-
-    def start(self):
-        self.alive = True
-        self._receive.start()
-
-    def stop(self):
-        self.alive = False
-        if self in self.server.handlers:
-            self.server.handlers.remove(self)
-
-
 class SocketConnection:
 
     def __init__(self, address):
@@ -164,16 +165,20 @@ class SocketConnection:
         self.alive = False
 
 
+class CrosswordHandler(SocketHandler):
+
+    def __init__(self, sock, address, server):
+        super().__init__(sock, address, server)
+        self.model = model.PlayerModel()
+
+
 class CrosswordServer(SocketServer):
 
     handler = CrosswordHandler
 
-
-
-
-
-class CrosswordHandler(SocketHandler):
-    pass
+    def __init__(self, address):
+        super().__init__(address)
+        self.model = None
 
 
 class CrosswordConnection(SocketConnection):
