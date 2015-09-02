@@ -26,6 +26,8 @@ class Controller:
         self.header.load()
         self.puzzle.load()
         self.clues.load()
+        # Clues also needs to be loaded for this to work
+        self.puzzle.set_cell(0, 0)
 
     def main(self):
         self.view.main()
@@ -87,9 +89,6 @@ class PuzzleController(SubController):
         for cell in self.model.cells:
             cell.fill = d if cell.kind == LETTER else e
             self.draw(cell)
-        self.player.x = self.player.y = 0
-        self.draw(self.player)
-        self.parent.clues.select(self.current.word[self.player.direction])
 
     reload = load
 
@@ -140,9 +139,15 @@ class PuzzleController(SubController):
         self.draw(word)
         self.player.direction = [ACROSS, DOWN][self.player.direction == ACROSS]
         self.draw(self.player)
-        self.parent.clues.select(self.current.word[self.player.direction])
+        self.parent.clues.set_clue(self.current.word[self.player.direction])
 
-    def move_cell(self, distance=1, absolute=False):
+    def set_cell(self, x: int, y: int):
+        self.player.x, self.player.y = x, y
+        self.draw(self.player)
+        self.parent.clues.set_clue(self.current.word[self.player.direction])
+        self.view.canvas.focus_set()
+
+    def move_cell(self, distance: int=1, absolute: bool=False):
         # Set constants for access
         step = -1 if distance < 0 else 1
         across = self.player.direction == ACROSS
@@ -171,18 +176,14 @@ class PuzzleController(SubController):
             if self.model.cells[x, y].kind == LETTER:
                 distance -= step
         # Select a new cell
-        self.player.x, self.player.y = x, y
-        self.draw(self.player)
-        self.parent.clues.select(self.current.word[self.player.direction])
+        self.set_cell(x, y)
 
     def move_word(self, count=1):
         direction = self.player.direction
         index = (self.model.words[direction].index(self.current.word[direction]) + count)
         index %= len(self.model.words[direction])
         cell = self.model.words[direction][index].cells[0]
-        self.player.x, self.player.y = cell.x, cell.y
-        self.draw(self.player)
-        self.parent.clues.select(self.current.word[self.player.direction])
+        self.set_cell(cell.x, cell.y)
 
     def insert_letter(self, letter: str):
         # If there is a current cell
@@ -195,14 +196,12 @@ class PuzzleController(SubController):
             elif letter in string.ascii_uppercase:
                 self.current.letters += letter.upper()
             self.draw(self.current)
-            self.parent.clues.select(self.current.word[self.player.direction])
 
     def remove_letter(self):
         # If there is a current cell
         if self.current:
             self.current.letters = self.current.letters[:-1]
             self.draw(self.current)
-            self.parent.clues.select(self.current.word[self.player.direction])
 
     def on_left_click(self, event):
         # Get focus
@@ -219,9 +218,7 @@ class PuzzleController(SubController):
         if cell == self.current:
             self.switch_direction()
         # Select the cell
-        self.player.x, self.player.y = x, y
-        self.draw(self.player)
-        self.parent.clues.select(self.current.word[self.player.direction])
+        self.set_cell(x, y)
 
     def on_backspace(self, event):
         self.remove_letter()
@@ -268,15 +265,37 @@ class CluesController(SubController):
     def __init__(self, parent: Controller):
         super().__init__(parent)
         self.view = self.parent.view.clues
+        self.view.across_listbox.bind("<Button-1>", self.on_across_left_click)
+        self.view.down_listbox.bind("<Button-1>", self.on_down_left_click)
 
     def load(self):
         self.view.across.set(list(map(lambda word: word.clue, self.model.words.across)))
         self.view.down.set(list(map(lambda word: word.clue, self.model.words.down)))
 
-    def select(self, word):
-        if word in self.model.words.across:
-            self.view.across_listbox.selection_set(self.model.words.across.index(word))
-        else:
-            self.view.down_listbox.selection_set(self.model.words.down.index(word))
-
     reload = load
+
+    def set_clue(self, word):
+        if word in self.model.words.across:
+            self.view.across_listbox.selection_clear(0, tk.END)
+            index = self.model.words.across.index(word)
+            self.view.across_listbox.selection_set(index)
+            self.view.across_listbox.see(index)
+        else:
+            self.view.down_listbox.selection_clear(0, tk.END)
+            index = self.model.words.down.index(word)
+            self.view.down_listbox.selection_set(index)
+            self.view.across_listbox.see(index)
+
+    def on_across_left_click(self, event):
+        index = self.view.across_listbox.nearest(event.y)
+        cell = self.model.words.across[index].cells[0]
+        if self.player.direction != ACROSS:
+            self.parent.puzzle.switch_direction()
+        self.parent.puzzle.set_cell(cell.x, cell.y)
+
+    def on_down_left_click(self, event):
+        index = self.view.down_listbox.nearest(event.y)
+        cell = self.model.words.down[index].cells[0]
+        if self.player.direction != DOWN:
+            self.parent.puzzle.switch_direction()
+        self.parent.puzzle.set_cell(cell.x, cell.y)

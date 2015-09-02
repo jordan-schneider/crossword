@@ -52,6 +52,10 @@ class View:
         """Stop the view during the main loop."""
         self.root.quit()
 
+    def call(self, event):
+        """Call events from the view object."""
+        self.root.event_generate(event, when="tail")
+
 
 class SubView:
     """Parent class for a crossword application subview.
@@ -82,6 +86,10 @@ class SubView:
         """Hide the widget in its parent."""
         self.frame.grid_forget()
         self.visible = False
+
+    def call(self, event):
+        """Call events from the view object."""
+        self.frame.event_generate(event, when="tail")
 
 
 class HeaderView(SubView):
@@ -193,7 +201,7 @@ class CluesView(SubView):
         self.across_frame.grid(row=1, pady=(CANVAS_PAD, PAD), sticky=tk.N+tk.S)
         self.across_frame.rowconfigure(0, weight=1)
         # Across listbox
-        self.across_listbox.config(bd=0, selectborderwidth=0, **settings.get("style:list"))
+        self.across_listbox.config(bd=0, selectborderwidth=0, activestyle=tk.NONE, **settings.get("style:list"))
         self.across_listbox.grid(row=0, column=0, sticky=tk.N+tk.S)
         self.across_listbox.config(yscrollcommand=self.across_scrollbar.set)
         # Across scrollbar
@@ -207,7 +215,7 @@ class CluesView(SubView):
         self.down_frame.grid(row=3, pady=(TINY_PAD, 0), sticky=tk.N+tk.S)
         self.down_frame.rowconfigure(0, weight=1)
         # Down listbox
-        self.down_listbox.config(bd=0, selectborderwidth=0, **settings.get("style:list"))
+        self.down_listbox.config(bd=0, selectborderwidth=0, activestyle=tk.NONE, **settings.get("style:list"))
         self.down_listbox.grid(row=0, column=0, sticky=tk.N+tk.S)
         self.down_listbox.config(yscrollcommand=self.down_scrollbar.set)
         # Down scrollbar
