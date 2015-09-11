@@ -77,6 +77,9 @@ class CellsAccess:
     def __iter__(self):
         return iter(self.cells)
 
+    def __len__(self):
+        return len(self.cells)
+
 
 class WordModel:
     """Basic container class for a single crossword cell."""
@@ -137,6 +140,9 @@ class WordsAccess:
     def __iter__(self):
         return self.words
 
+    def __len__(self):
+        return len(self.words)
+
     def __getitem__(self, key):
         return {ACROSS: self.across, DOWN: self.down}[key]
 
@@ -167,6 +173,7 @@ class PlayerModel:
         """Initialize a player profile model."""
         self.name = name
         self.color = color
+        self.id = None
         self.direction = ACROSS
         self.x = 0
         self.y = 0

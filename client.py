@@ -1,10 +1,5 @@
-from crossword import network
-import time
+from crossword import controller
 
-connection = network.SocketConnection(("127.0.0.1", 50000))
-connection.start()
-connection.emit("echo", "Hello, world!")
-connection.emit("echo", "What?")
-time.sleep(5)
-connection.stop()
+application = controller.Controller("Noah", "black")
+application.main()
 print("stopped")

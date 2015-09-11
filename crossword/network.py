@@ -3,26 +3,28 @@ import struct
 import queue
 import threading
 import pickle
-from . import model
+import os
+from . import puz
+from . import model as _model
+from . import metrics as _metrics
+from .constants import *
 
 
 # Socket utility
 def send(sock: socket.socket, message: bytes):
     """Pack the message length and content for sending larger messages."""
-    print("send size", len(message))
     message = struct.pack('>I', len(message)) + message
     sock.sendall(message)
 
 
-def recv(sock: socket.socket):
+def recv(sock: socket.socket) -> bytes:
     """Read message length and receive the corresponding amount of data."""
     size = _recv(sock, 4)
     size = struct.unpack('>I', size)[0]
-    print("recv size", size)
     return _recv(sock, size)
 
 
-def _recv(sock: socket.socket, size: int):
+def _recv(sock: socket.socket, size: int) -> bytes:
     """Secondary function to receive a specified amount of data."""
     message = b''
     while len(message) < size:
@@ -54,7 +56,7 @@ class SocketHandler:
                 print("handler receive", e)
                 self.stop()
 
-    def emit(self, event, data):
+    def emit(self, event: str, data: object):
         send(self.sock, pickle.dumps((event, data)))
 
     def start(self):
@@ -65,6 +67,7 @@ class SocketHandler:
         self.alive = False
         if self in self.server.handlers:
             self.server.handlers.remove(self)
+        self.server.emit(CLIENT_EXITED, "")
 
 
 class SocketServer:
@@ -99,19 +102,20 @@ class SocketServer:
                 print("server accept", e)
                 self.stop()
 
-    def serve(self):
+    def receive(self):
         while self.alive:
             try:
                 event, data, handler = self.queue.get()
                 function = self.bindings.get(event)
                 if function is None:
                     print("caught event %s with no binding" % event)
-                function(data)
+                else:
+                    function(data, handler)
             except Exception as e:
                 print("server serve", e)
                 self.stop()
 
-    def emit(self, event, data, *handlers):
+    def emit(self, event: str, data: object, *handlers: SocketHandler):
         handlers = handlers or self.handlers
         for handler in handlers:
             handler.emit(event, data)
@@ -125,7 +129,7 @@ class SocketServer:
     def start(self):
         self.alive = True
         self._accept.start()
-        self.serve()
+        self.receive()
 
     def stop(self):
         self.alive = False
@@ -139,6 +143,8 @@ class SocketConnection:
         self.address = address
         self.alive = False
 
+        self.q = queue.Queue()
+
         self.sock = socket.socket()
         self.sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         self.sock.connect(self.address)
@@ -149,13 +155,16 @@ class SocketConnection:
         while self.alive:
             try:
                 event, data = pickle.loads(recv(self.sock))
-                print(data)
+                self.q.put((event, data))
             except Exception as e:
                 print("connection receive", e)
                 self.stop()
 
-    def emit(self, event, data):
+    def emit(self, event: str, data: object):
         send(self.sock, pickle.dumps((event, data)))
+
+    def queue(self, q: queue.Queue):
+        self.q = q
 
     def start(self):
         self.alive = True
@@ -169,7 +178,8 @@ class CrosswordHandler(SocketHandler):
 
     def __init__(self, sock, address, server):
         super().__init__(sock, address, server)
-        self.model = model.PlayerModel()
+        self.model = _model.PlayerModel("", "")
+        self.id = id(self)
 
 
 class CrosswordServer(SocketServer):
@@ -179,9 +189,33 @@ class CrosswordServer(SocketServer):
     def __init__(self, address):
         super().__init__(address)
         self.model = None
+        self.metrics = None
+
+        if not os.path.isdir("puzzles"):
+            os.makedirs("puzzles")
+
+        self.bind(PUZZLE_LOADED, self.on_puzzle_loaded)
+        self.bind(CLIENT_JOINED, self.on_client_joined)
+
+    def on_puzzle_loaded(self, puzzle: bytes, handler):
+        path = os.path.join("puzzles", str(hash(puzzle)) + ".puz")
+        with open(path, "w") as file:
+            file.write(puzzle)
+        self.model = _model.PuzzleModel(puz.read(path))
+        self.metrics = _metrics.PuzzleMetrics(self.model)
+
+    def on_client_joined(self, data: dict, handler: CrosswordHandler):
+        handler.model.name = data["name"]
+        handler.model.color = data["color"]
+        data["id"] = handler.id
+        handler.emit(ID_ASSIGNED, handler.id)
+        self.emit(CLIENT_JOINED, data)
+        print("client named '%s' joined" % handler.model.name)
 
 
 class CrosswordConnection(SocketConnection):
-    pass
+
+    def __init__(self, address):
+        super().__init__(address)
 
 

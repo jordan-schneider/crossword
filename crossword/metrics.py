@@ -1,4 +1,5 @@
 import collections
+from . import model as _model
 
 
 class PlayerMetrics:
@@ -22,13 +23,13 @@ class PlayerMetrics:
 class PuzzleMetrics:
     """A simple container object for game statistics."""
 
-    def __init__(self, author, width, height, cells, words):
+    def __init__(self, puzzle: _model.PuzzleModel):
         """Initialize a new metrics model."""
-        self.author = author
-        self.width = width
-        self.height = height
-        self.cells = cells
-        self.words = words
+        self.author = puzzle.author
+        self.width = puzzle.width
+        self.height = puzzle.height
+        self.cells = len(puzzle.cells)
+        self.words = len(puzzle.words)
         # Timing
         self.time_start = 0
         self.time_finish = 0
