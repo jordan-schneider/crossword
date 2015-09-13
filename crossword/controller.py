@@ -10,7 +10,7 @@ from .constants import *
 
 class Controller:
 
-    def __init__(self, name, color):
+    def __init__(self, name, color, server=("127.0.0.1", 50000)):
         """Initialize a new controller, its network connection, and its
         sub-controllers."""
         # Queue and bindings
@@ -28,7 +28,7 @@ class Controller:
         self.bind(CLIENT_JOINED, self.on_client_joined)
         self.bind(ID_ASSIGNED, self.on_id_assigned)
         # Network connection
-        self.connection = _network.CrosswordConnection(("127.0.0.1", 50000))
+        self.connection = _network.CrosswordConnection(server)
         self.connection.queue(self.queue)
         self.connection.start()
         self.connection.emit(CLIENT_JOINED, {"name": self.players[0].name, "color": self.players[0].color})
