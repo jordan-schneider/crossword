@@ -76,6 +76,12 @@ SERVER_KICKED = "server kicked"
 PUZZLE_LOADED = "puzzle loaded"
 ID_ASSIGNED = "id assigned"
 
+# Network constants
+DEFAULT_PORT = 50000
+
+# Colors
+COLORS = ["Red", "Orange", "Yellow", "Green", "Blue", "Purple"]
+
 # Event bindings
 if platform.system() == "Windows":
     BUTTON_2 = "<Button-3>"

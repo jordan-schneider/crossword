@@ -248,3 +248,69 @@ class ListVar:
 
     def clear(self):
         self.listbox.delete(0, tk.END)
+
+
+class JoinDialog:
+
+    def __init__(self):
+        # Passed members
+        self.result = None
+        # Root
+        self.root = tk.Tk()
+        self.root.title("Join Server")
+        # Content frame
+        self.frame = tk.Frame(self.root)
+        # Name entry
+        self.name = tk.StringVar()
+        self.name_entry = tk.Entry(self.frame, textvariable=self.name)
+        # Color entry
+        self.color = tk.StringVar()
+        self.color.set(COLORS[0])
+        self.color_selector = tk.OptionMenu(self.frame, self.color, *COLORS)
+        self.color_selector.config(anchor=tk.W)
+        # Address entry
+        self.address = tk.StringVar()
+        self.address_selector = tk.Entry(self.frame, textvariable=self.address)
+        # Buttons
+        self.quit_button = tk.Button(self.frame, text="Quit", command=self.quit)
+        self.connect_button = tk.Button(self.frame, text="Connect", command=self.connect)
+        self.load()
+
+    def load(self):
+        self.frame.grid(padx=5, pady=5)
+        self.name_entry.config(width=40)
+        self.name_entry.grid(row=0, column=0, columnspan=3, padx=5, pady=5, sticky=tk.W+tk.E)
+        self.color_selector.grid(row=1, column=0, columnspan=3, padx=3, pady=5, sticky=tk.W+tk.E)
+        self.address_selector.grid(row=2, column=0, columnspan=3, padx=5, pady=5, sticky=tk.W+tk.E)
+        self.frame.columnconfigure(0, weight=1)
+        self.connect_button.grid(row=3, column=2, pady=5, padx=5, sticky=tk.E)
+        self.quit_button.grid(row=3, column=1, pady=5, sticky=tk.E)
+
+    def validate(self):
+        if self.name.get() and self.color.get() and self.address.get():
+            self.connect_button.config(state=tk.NORMAL)
+        else:
+            self.connect_button.config(state=tk.DISABLED)
+        self.root.after(50, self.validate)
+
+    def quit(self):
+        self.root.destroy()
+
+    def connect(self):
+        name = self.name.get()
+        color = self.color.get().lower()
+        split = self.address.get().split(":")
+        address = (split[0], DEFAULT_PORT if len(split) == 1 else int(split[1]))
+        self.result = (name, color, address)
+        self.root.destroy()
+
+    def main(self):
+        """Run the main loop of the view."""
+        self.validate()
+        self.root.mainloop()
+
+
+def join_dialog():
+    jd = JoinDialog()
+    jd.main()
+    return jd.result

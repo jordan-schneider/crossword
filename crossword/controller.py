@@ -10,28 +10,34 @@ from .constants import *
 
 class Controller:
 
-    def __init__(self, name, color):
+    def __init__(self):
         """Initialize a new controller, its network connection, and its
         sub-controllers."""
         # Queue and bindings
         self.queue = queue.Queue()
         self.bindings = {}
-        # Main contents
-        self.view = _view.View()
-        self.model = None
-        self.players = [_model.PlayerModel(name, color)]
-        # Sub-controllers
-        self.header = HeaderController(self)
-        self.puzzle = PuzzleController(self)
-        self.clues = CluesController(self)
+        # Get the player
+        result = _view.join_dialog()
+        if not result:
+            quit()
+        self.players = [_model.PlayerModel(result[0], result[1])]
         # Queue bindings
         self.bind(CLIENT_JOINED, self.on_client_joined)
         self.bind(ID_ASSIGNED, self.on_id_assigned)
         # Network connection
-        self.connection = _network.CrosswordConnection(("127.0.0.1", 50000))
+        print(result[2])
+        self.connection = _network.CrosswordConnection(result[2])
         self.connection.queue(self.queue)
         self.connection.start()
         self.connection.emit(CLIENT_JOINED, {"name": self.players[0].name, "color": self.players[0].color})
+
+        # Main contents
+        self.view = _view.View()
+        self.model = None
+        # Sub-controllers
+        self.header = HeaderController(self)
+        self.puzzle = PuzzleController(self)
+        self.clues = CluesController(self)
 
     def reload(self):
         """Reload the controller."""
