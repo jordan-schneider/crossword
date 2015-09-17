@@ -43,6 +43,14 @@ class View:
         self.header.show()
         self.puzzle.show()
         self.clues.show()
+        
+    def hide(self):
+        """Hide the entire view."""
+        self.root.iconify() # self.root.withdraw()
+
+    def show(self):
+        """Show the entire view."""
+        self.root.deiconify()
 
     def main(self):
         """Run the main loop of the view."""

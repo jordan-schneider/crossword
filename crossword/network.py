@@ -38,8 +38,14 @@ def _recv(sock: socket.socket, size: int) -> bytes:
 
 # Socket wrapper classes
 class SocketHandler:
+    """Socket server worker base class.
+    
+    The socket handler deals with sending and receiving messages from
+    the connected client.
+    """
 
-    def __init__(self, sock, address, server):
+    def __init__(self, sock: socket.socket, address: str, server):
+        """Initialize a new socket handler."""
         self.sock = sock
         self.address = address
         self.server = server
@@ -48,6 +54,7 @@ class SocketHandler:
         self._receive = threading.Thread(target=self.receive, daemon=True)
 
     def receive(self):
+        """Receive loop that queues incoming messages."""
         while self.alive:
             try:
                 event, data = pickle.loads(recv(self.sock))
@@ -57,13 +64,16 @@ class SocketHandler:
                 self.stop()
 
     def emit(self, event: str, data: object):
+        """Send a message to the connected client."""
         send(self.sock, pickle.dumps((event, data)))
 
     def start(self):
+        """Start the socket handler."""
         self.alive = True
         self._receive.start()
 
     def stop(self):
+        """Stop the socket handler."""
         self.alive = False
         if self in self.server.handlers:
             self.server.handlers.remove(self)
