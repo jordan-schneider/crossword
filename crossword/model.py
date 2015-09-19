@@ -173,7 +173,9 @@ class PlayerModel:
         """Initialize a player profile model."""
         self.name = name
         self.color = color
-        self.id = None
+        # Defined by server
+        self.id = 0
+        # Already set
         self.direction = ACROSS
         self.x = 0
         self.y = 0

@@ -25,7 +25,6 @@ class Controller:
         self.bind(CLIENT_JOINED, self.on_client_joined)
         self.bind(ID_ASSIGNED, self.on_id_assigned)
         # Network connection
-        print(result[2])
         self.connection = _network.CrosswordConnection(result[2])
         self.connection.queue(self.queue)
         self.connection.start()
@@ -38,6 +37,8 @@ class Controller:
         self.header = HeaderController(self)
         self.puzzle = PuzzleController(self)
         self.clues = CluesController(self)
+        # Hide
+        self.view.hide()
 
     def reload(self):
         """Reload the controller."""
