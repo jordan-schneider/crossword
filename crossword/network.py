@@ -114,16 +114,12 @@ class SocketServer:
 
     def receive(self):
         while self.alive:
-            try:
-                event, data, handler = self.queue.get()
-                function = self.bindings.get(event)
-                if function is None:
-                    print("caught event %s with no binding" % event)
-                else:
-                    function(data, handler)
-            except Exception as e:
-                print("server serve", e)
-                self.stop()
+            event, data, handler = self.queue.get()
+            function = self.bindings.get(event)
+            if function is None:
+                print("caught event %s with no binding" % event)
+            else:
+                function(data, handler)
 
     def emit(self, event: str, data: object, *handlers: SocketHandler):
         handlers = handlers or self.handlers
@@ -134,7 +130,7 @@ class SocketServer:
         self.bindings[event] = function
 
     def echo(self, data, handler):
-        handler.emit("echo", data)
+        handler.emit(data)
 
     def start(self):
         self.alive = True
@@ -204,23 +200,37 @@ class CrosswordServer(SocketServer):
         if not os.path.isdir("puzzles"):
             os.makedirs("puzzles")
 
-        self.bind(PUZZLE_LOADED, self.on_puzzle_loaded)
         self.bind(CLIENT_JOINED, self.on_client_joined)
-
-    def on_puzzle_loaded(self, puzzle: bytes, handler):
-        path = os.path.join("puzzles", str(hash(puzzle)) + ".puz")
-        with open(path, "w") as file:
-            file.write(puzzle)
-        self.model = _model.PuzzleModel(puz.read(path))
-        self.metrics = _metrics.PuzzleMetrics(self.model)
+        self.bind(PUZZLE_SUBMITTED, self.on_puzzle_submitted)
 
     def on_client_joined(self, data: dict, handler: CrosswordHandler):
         handler.model.name = data["name"]
         handler.model.color = data["color"]
-        data["id"] = handler.id
-        handler.emit(ID_ASSIGNED, handler.id)
-        self.emit(CLIENT_JOINED, data)
+        self.emit(CLIENT_LIST, {handler.id: handler for handler in self.handlers})
         print("client named '%s' joined" % handler.model.name)
+
+        if not self.model:
+            handler.emit(PUZZLE_REQUESTED, None)
+
+    def on_puzzle_passed(self, data: None, handler: CrosswordHandler):
+        index = (self.handlers.index(handler) + 1) % len(self.handlers)
+        self.handlers[index].emit(PUZZLE_REQUESTED, None)
+
+    def on_puzzle_submitted(self, data: bytes, handler: CrosswordHandler):
+        path = os.path.join("puzzles", str(hash(data)) + ".puz")
+        with open(path, "wb") as file:
+            file.write(data)
+        self.model = _model.PuzzleModel(puz.read(path))
+        self.metrics = _metrics.PuzzleMetrics(self.model)
+        self.emit(PUZZLE_SUBMITTED, data)
+
+    def on_cell_selected(self, data: tuple, handler: CrosswordHandler):
+        handler.model.x, handler.model.y = data
+        self.emit(CELL_SELECTED, data)
+
+    def on_direction_set(self, data: str, handler: CrosswordHandler):
+        handler.model.direction = data
+        self.emit(DIRECTION_SET, data)
 
 
 class CrosswordConnection(SocketConnection):

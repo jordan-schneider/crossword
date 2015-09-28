@@ -73,8 +73,17 @@ CLIENT_JOINED = "client joined"
 CLIENT_EXITED = "client exited"
 SERVER_STOPPED = "server stopped"
 SERVER_KICKED = "server kicked"
-PUZZLE_LOADED = "puzzle loaded"
+
+PUZZLE_SUBMITTED = "puzzle submitted"
+PUZZLE_REQUESTED = "puzzle requested"
+PUZZLE_PASSED = "puzzle passed"
+
+CLIENT_LIST = "client list"
 ID_ASSIGNED = "id assigned"
+
+CELL_SELECTED = "cell selected"
+DIRECTION_SET = "direction set"
+LETTER_INSERTED = "letter inserted"
 
 # Network constants
 DEFAULT_PORT = 50000

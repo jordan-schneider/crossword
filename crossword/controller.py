@@ -1,6 +1,8 @@
 import tkinter as tk
+import tkinter.messagebox as tkmb
 import string
 import queue
+from . import puz
 from . import view as _view
 from . import model as _model
 from . import network as _network
@@ -17,20 +19,33 @@ class Controller:
         self.queue = queue.Queue()
         self.bindings = {}
         # Get the player
-        result = _view.join_dialog()
-        if not result:
-            quit()
-        self.players = [_model.PlayerModel(result[0], result[1])]
+        result = {}
+        # Try to join
+        while True:
+            result = _view.join_dialog(result)
+            if not result:
+                quit()
+
+            try:
+                # Network connection
+                self.connection = _network.CrosswordConnection(result["address"])
+            except OSError:
+                tkmb.showerror("Error", "Could not connect to server")
+            else:
+                break
+
         # Queue bindings
         self.bind(CLIENT_JOINED, self.on_client_joined)
-        self.bind(ID_ASSIGNED, self.on_id_assigned)
-        # Network connection
-        self.connection = _network.CrosswordConnection(result[2])
+        self.bind(PUZZLE_REQUESTED, self.on_puzzle_requested)
+        self.bind(PUZZLE_SUBMITTED, self.on_puzzle_submitted)
+        # Connection
         self.connection.queue(self.queue)
         self.connection.start()
-        self.connection.emit(CLIENT_JOINED, {"name": self.players[0].name, "color": self.players[0].color})
+        self.connection.emit(CLIENT_JOINED, (result["name"], result["color"]))
 
         # Main contents
+        self.player = None
+        self.players = []
         self.view = _view.View()
         self.model = None
         # Sub-controllers
@@ -53,7 +68,7 @@ class Controller:
         self.puzzle.load()
         self.clues.load()
         # Clues also needs to be loaded for this to work
-        self.puzzle.set_cell(0, 0)
+        self.puzzle.select_cell(0, 0)
 
     def update(self):
         """Update the controller."""
@@ -76,16 +91,27 @@ class Controller:
     def bind(self, event, function):
         self.bindings[event] = function
 
-    def on_id_assigned(self, data):
-        print(data)
-        self.players[0].id = data
-
     def on_client_joined(self, data):
-        print(data)
-        if self.players[0].id != data["id"]:
-            self.players.append(_model.PlayerModel(data["name"], data["color"]))
+        if self.player is None:
+            self.players, pid = data
+            self.player = self.players[id]
+            self.view.root.title("Joined as %s" % self.player.name)
         else:
-            self.view.root.title("Joined as %s" % self.players[0].name)
+            self.players.update(data)
+
+    def on_puzzle_requested(self, data):
+        path = _view.puzzle_dialog()
+        if path is None:
+            self.connection.emit(PUZZLE_PASSED, None)
+        else:
+            with open(path, "rb") as file:
+                data = file.read()
+            self.connection.emit(PUZZLE_SUBMITTED, data)
+
+    def on_puzzle_submitted(self, data):
+        model = _model.PuzzleModel(puz.load(data))
+        self.load(model)
+        self.view.show()
 
 
 class SubController:
@@ -103,6 +129,10 @@ class SubController:
     def players(self):
         """Get the player of the controller."""
         return self.parent.players
+
+    @property
+    def player(self):
+        return self.parent.player
 
     def reload(self):
         """Reload the controller."""
@@ -180,37 +210,39 @@ class PuzzleController(SubController):
                 raise TypeError("Cannot select an empty cell")
             # If there is a selection, clear it
             if self.current:
-                word = self.current.word[self.players[0].direction]
+                word = self.current.word[self.player.direction]
                 word.fill = settings.get("board:fill:default")
                 self.draw(word)
             # Change the fill of the word and selected cell
             if options.get("highlight") is not False:
-                cell.word[self.players[0].direction].fill = settings.get("board:fill:selected")
+                cell.word[self.player.direction].fill = settings.get("board:fill:selected")
                 cell.fill = settings.get("board:fill:selected-letter")
             # Draw the word
-            self.draw(cell.word[self.players[0].direction])
+            self.draw(cell.word[self.player.direction])
             # Set the current selection
             self.current = cell
 
     def switch_direction(self):
-        word = self.current.word[self.players[0].direction]
+        word = self.current.word[self.player.direction]
         word.fill = settings.get("board:fill:default")
         self.draw(word)
-        self.players[0].direction = [ACROSS, DOWN][self.players[0].direction == ACROSS]
-        self.draw(self.players[0])
-        self.parent.clues.set_clue(self.current.word[self.players[0].direction])
+        self.player.direction = [ACROSS, DOWN][self.player.direction == ACROSS]
+        self.draw(self.player)
+        self.parent.clues.set_clue(self.current.word[self.player.direction])
+        self.parent.connection.emit(DIRECTION_SET, self.player.direction)
 
-    def set_cell(self, x: int, y: int):
-        self.players[0].x, self.players[0].y = x, y
-        self.draw(self.players[0])
-        self.parent.clues.set_clue(self.current.word[self.players[0].direction])
+    def select_cell(self, x: int, y: int):
+        self.player.x, self.player.y = x, y
+        self.draw(self.player)
+        self.parent.clues.set_clue(self.current.word[self.player.direction])
         self.view.canvas.focus_set()
+        self.parent.connection.emit(CELL_SELECTED, (x, y))
 
     def move_cell(self, distance: int=1, absolute: bool=False):
         # Set constants for access
         step = -1 if distance < 0 else 1
-        across = self.players[0].direction == ACROSS
-        down = self.players[0].direction == DOWN
+        across = self.player.direction == ACROSS
+        down = self.player.direction == DOWN
         x, y = self.current.x, self.current.y
         # Move while not complete
         while distance != 0:
@@ -235,31 +267,33 @@ class PuzzleController(SubController):
             if self.model.cells[x, y].kind == LETTER:
                 distance -= step
         # Select a new cell
-        self.set_cell(x, y)
+        self.select_cell(x, y)
 
     def move_word(self, count=1):
-        direction = self.players[0].direction
+        direction = self.player.direction
         index = (self.model.words[direction].index(self.current.word[direction]) + count)
         index %= len(self.model.words[direction])
         cell = self.model.words[direction][index].cells[0]
-        self.set_cell(cell.x, cell.y)
+        self.select_cell(cell.x, cell.y)
 
     def insert_letter(self, letter: str):
         # If there is a current cell
         if self.current:
-            self.current.owner = self.players[0]
+            self.current.owner = self.player
             if letter == " ":
                 self.current.letters = ""
             elif letter in string.ascii_lowercase:
                 self.current.letters = letter.upper()
             elif letter in string.ascii_uppercase:
                 self.current.letters += letter.upper()
+            self.parent.connection.emit(LETTER_INSERTED, self.current.letters)
             self.draw(self.current)
 
     def remove_letter(self):
         # If there is a current cell
         if self.current:
             self.current.letters = self.current.letters[:-1]
+            self.parent.connection.emit(LETTER_INSERTED, self.current.letters)
             self.draw(self.current)
 
     def on_left_click(self, event):
@@ -277,7 +311,7 @@ class PuzzleController(SubController):
         if cell == self.current:
             self.switch_direction()
         # Select the cell
-        self.set_cell(x, y)
+        self.select_cell(x, y)
 
     def on_backspace(self, event):
         self.remove_letter()
@@ -304,7 +338,7 @@ class PuzzleController(SubController):
         arrow_key_movement = settings.get("controls:arrow-movement")
         direction = ACROSS if event.keysym in ACROSS_ARROWS else DOWN
         distance = -1 if event.keysym in NEGATIVE_ARROWS else 1
-        if self.players[0].direction != direction:
+        if self.player.direction != direction:
             self.switch_direction()
             if on_arrow_key == "switch direction and move":
                 self.move_cell(distance=distance, absolute=arrow_key_movement == "absolute")
@@ -348,13 +382,13 @@ class CluesController(SubController):
     def on_across_left_click(self, event):
         index = self.view.across_listbox.nearest(event.y)
         cell = self.model.words.across[index].cells[0]
-        if self.players[0].direction != ACROSS:
+        if self.player.direction != ACROSS:
             self.parent.puzzle.switch_direction()
-        self.parent.puzzle.set_cell(cell.x, cell.y)
+        self.parent.puzzle.select_cell(cell.x, cell.y)
 
     def on_down_left_click(self, event):
         index = self.view.down_listbox.nearest(event.y)
         cell = self.model.words.down[index].cells[0]
-        if self.players[0].direction != DOWN:
+        if self.player.direction != DOWN:
             self.parent.puzzle.switch_direction()
-        self.parent.puzzle.set_cell(cell.x, cell.y)
+        self.parent.puzzle.select_cell(cell.x, cell.y)

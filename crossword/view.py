@@ -14,6 +14,7 @@ __status__ = "Development"
 
 # Import
 import tkinter as tk
+import tkinter.filedialog as tkfd
 from . import settings
 from .constants import *
 
@@ -46,10 +47,11 @@ class View:
         
     def hide(self):
         """Hide the entire view."""
-        self.root.iconify() # self.root.withdraw()
+        self.root.iconify()  # self.root.withdraw()
 
     def show(self):
         """Show the entire view."""
+        self.root.update()
         self.root.deiconify()
 
     def main(self):
@@ -260,7 +262,8 @@ class ListVar:
 
 class JoinDialog:
 
-    def __init__(self):
+    def __init__(self, defaults=None):
+        defaults = dict(defaults)
         # Passed members
         self.result = None
         # Root
@@ -270,14 +273,16 @@ class JoinDialog:
         self.frame = tk.Frame(self.root)
         # Name entry
         self.name = tk.StringVar()
+        self.name.set(defaults.get("name", ""))
         self.name_entry = tk.Entry(self.frame, textvariable=self.name)
         # Color entry
         self.color = tk.StringVar()
-        self.color.set(COLORS[0])
+        self.color.set(defaults.get("color", COLORS[0]))
         self.color_selector = tk.OptionMenu(self.frame, self.color, *COLORS)
         self.color_selector.config(anchor=tk.W)
         # Address entry
         self.address = tk.StringVar()
+        self.address.set(defaults.get("address", "127.0.0.1"))
         self.address_selector = tk.Entry(self.frame, textvariable=self.address)
         # Buttons
         self.quit_button = tk.Button(self.frame, text="Quit", command=self.quit)
@@ -309,7 +314,7 @@ class JoinDialog:
         color = self.color.get().lower()
         split = self.address.get().split(":")
         address = (split[0], DEFAULT_PORT if len(split) == 1 else int(split[1]))
-        self.result = (name, color, address)
+        self.result = {"name": name, "color": color, "address": address}
         self.root.destroy()
 
     def main(self):
@@ -318,7 +323,13 @@ class JoinDialog:
         self.root.mainloop()
 
 
-def join_dialog():
-    jd = JoinDialog()
+def join_dialog(defaults=None):
+    jd = JoinDialog(defaults)
     jd.main()
     return jd.result
+
+
+def puzzle_dialog():
+    path = tkfd.askopenfilename(title="Select a puzzle")
+    return path
+
