@@ -3,7 +3,6 @@ import struct
 import queue
 import threading
 import pickle
-import os
 from . import puz
 from . import model as _model
 from . import metrics as _metrics
@@ -61,6 +60,7 @@ class SocketHandler:
                 self.server.queue.put((event, data, self))
             except Exception as e:
                 print("handler receive", e)
+                self.server.queue.put((CLIENT_EXITED, None, self))
                 self.stop()
 
     def emit(self, event: str, data: object):
@@ -185,7 +185,7 @@ class CrosswordHandler(SocketHandler):
     def __init__(self, sock, address, server):
         super().__init__(sock, address, server)
         self.model = _model.PlayerModel("", "")
-        self.id = id(self)
+        self.model.id = self.address[0]
 
 
 class CrosswordServer(SocketServer):
@@ -201,17 +201,30 @@ class CrosswordServer(SocketServer):
             os.makedirs("puzzles")
 
         self.bind(CLIENT_JOINED, self.on_client_joined)
+        self.bind(CLIENT_EXITED, self.on_client_exited)
+        self.bind(PUZZLE_PASSED, self.on_puzzle_passed)
         self.bind(PUZZLE_SUBMITTED, self.on_puzzle_submitted)
+        self.bind(CELL_SELECTED, self.on_cell_selected)
+        self.bind(DIRECTION_SET, self.on_direction_set)
+        self.bind(LETTER_INSERTED, self.on_letter_inserted)
 
     def on_client_joined(self, data: dict, handler: CrosswordHandler):
         handler.model.name = data["name"]
         handler.model.color = data["color"]
-        self.emit(CLIENT_LIST, {handler.id: handler for handler in self.handlers})
-        print("client named '%s' joined" % handler.model.name)
+        print("client named '%s' joined as %s" % (handler.model.name, handler.model.id))
+
+        self.broadcast_client_list()
 
         if not self.model:
             handler.emit(PUZZLE_REQUESTED, None)
+        else:
+            handler.emit(PUZZLE_UPDATE, self.model)
 
+    def on_client_exited(self, data: dict, handler: CrosswordHandler):
+        if len(self.handlers) == 0:
+            self.model = None
+
+    # Puzzle submission
     def on_puzzle_passed(self, data: None, handler: CrosswordHandler):
         index = (self.handlers.index(handler) + 1) % len(self.handlers)
         self.handlers[index].emit(PUZZLE_REQUESTED, None)
@@ -220,17 +233,39 @@ class CrosswordServer(SocketServer):
         path = os.path.join("puzzles", str(hash(data)) + ".puz")
         with open(path, "wb") as file:
             file.write(data)
-        self.model = _model.PuzzleModel(puz.read(path))
-        self.metrics = _metrics.PuzzleMetrics(self.model)
-        self.emit(PUZZLE_SUBMITTED, data)
 
+        try:
+            self.model = _model.PuzzleModel(puz.read(path))
+        except:
+            handler.emit(PUZZLE_REQUESTED, None)
+        else:
+            self.metrics = _metrics.PuzzleMetrics(self.model)
+            self.emit(PUZZLE_SUBMITTED, data)
+
+    # User echo methods
     def on_cell_selected(self, data: tuple, handler: CrosswordHandler):
         handler.model.x, handler.model.y = data
-        self.emit(CELL_SELECTED, data)
+        self.emit(CELL_SELECTED, (handler.model.id, data))
 
     def on_direction_set(self, data: str, handler: CrosswordHandler):
         handler.model.direction = data
-        self.emit(DIRECTION_SET, data)
+        self.emit(DIRECTION_SET, (handler.model.id, data))
+
+    def on_letter_inserted(self, data: tuple, handler: CrosswordHandler):
+        x, y, letters = data
+        self.model.cells[x, y].letters = letters
+        self.model.cells[x, y].owner = handler.model.id
+        others = self.handlers[:]
+        others.remove(handler)
+        self.emit(LETTER_INSERTED, (handler.model.id, data), *others)
+
+    # Special case methods
+    def broadcast_client_list(self):
+        models = [handler.model for handler in self.handlers]
+        for handler in self.handlers:
+            copy = models[:]
+            copy.insert(0, copy.pop(copy.index(handler.model)))
+            self.emit(CLIENT_LIST_UPDATED, copy)
 
 
 class CrosswordConnection(SocketConnection):

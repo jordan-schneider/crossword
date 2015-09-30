@@ -50,10 +50,6 @@ class CellModel:
         self.drawings.number = None
         self.drawings.letter = None
 
-    @property
-    def color(self):
-        return "" if not self.owner else self.owner.color
-
 
 class CellsAccess:
     """Basic matrix-like container for a crossword board's cells."""

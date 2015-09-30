@@ -9,7 +9,8 @@
       "selected": "light blue",
       "selected-letter": "yellow"
     },
-    "font-family": "tkDefaultFont"
+    "font-family": "tkDefaultFont",
+    "font-color": "black"
   },
   "controls": {
     "arrow-movement": [

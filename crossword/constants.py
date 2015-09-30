@@ -71,15 +71,14 @@ SPECTATOR = "spectator"
 # Network messages
 CLIENT_JOINED = "client joined"
 CLIENT_EXITED = "client exited"
+CLIENT_LIST_UPDATED = "client list updated"
 SERVER_STOPPED = "server stopped"
 SERVER_KICKED = "server kicked"
 
 PUZZLE_SUBMITTED = "puzzle submitted"
 PUZZLE_REQUESTED = "puzzle requested"
 PUZZLE_PASSED = "puzzle passed"
-
-CLIENT_LIST = "client list"
-ID_ASSIGNED = "id assigned"
+PUZZLE_UPDATE = "puzzle update"
 
 CELL_SELECTED = "cell selected"
 DIRECTION_SET = "direction set"

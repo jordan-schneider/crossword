@@ -18,6 +18,7 @@ class Controller:
         # Queue and bindings
         self.queue = queue.Queue()
         self.bindings = {}
+
         # Get the player
         result = {}
         # Try to join
@@ -38,13 +39,18 @@ class Controller:
         self.bind(CLIENT_JOINED, self.on_client_joined)
         self.bind(PUZZLE_REQUESTED, self.on_puzzle_requested)
         self.bind(PUZZLE_SUBMITTED, self.on_puzzle_submitted)
+        self.bind(PUZZLE_UPDATE, self.on_puzzle_update)
+        self.bind(CLIENT_LIST_UPDATED, self.on_client_list_updated)
+        self.bind(CELL_SELECTED, self.on_cell_selected)
+        self.bind(DIRECTION_SET, self.on_direction_set)
+        self.bind(LETTER_INSERTED, self.on_letter_inserted)
         # Connection
         self.connection.queue(self.queue)
         self.connection.start()
-        self.connection.emit(CLIENT_JOINED, (result["name"], result["color"]))
+        self.connection.emit(CLIENT_JOINED, result)
 
         # Main contents
-        self.player = None
+        self.player = _model.PlayerModel(result["name"], result["color"])
         self.players = []
         self.view = _view.View()
         self.model = None
@@ -99,6 +105,10 @@ class Controller:
         else:
             self.players.update(data)
 
+    def on_client_list_updated(self, data):
+        self.players = data
+        self.player = data[0]
+
     def on_puzzle_requested(self, data):
         path = _view.puzzle_dialog()
         if path is None:
@@ -112,6 +122,30 @@ class Controller:
         model = _model.PuzzleModel(puz.load(data))
         self.load(model)
         self.view.show()
+
+    def on_puzzle_update(self, data):
+        self.load(data)
+
+    def on_cell_selected(self, data):
+        pid, data = data
+        for player in self.players:
+            if player.id == pid:
+                player.x, player.y = data
+
+    def on_direction_set(self, data):
+        pid, data = data
+        for player in self.players:
+            if player.id == pid:
+                player.direction = data
+
+    def on_letter_inserted(self, data):
+        pid, data = data
+        x, y, letters = data
+        self.model.cells[x, y].letters = letters
+        for player in self.players:
+            if player.id == pid:
+                self.model.cells[x, y].owner = player.id
+                self.puzzle.draw(self.model.cells[x, y])
 
 
 class SubController:
@@ -193,7 +227,10 @@ class PuzzleController(SubController):
                 pos = (x*s + h, y*s + h)
                 letters = model.letters
                 font = (settings.get("board:font-family"), int(s / (1.1 + 0.6*len(model.letters)))-3)
-                color = model.color
+                color = settings.get("board:font-color")
+                for player in self.players:
+                    if model.owner == player.id:
+                        color = player.color
                 model.drawings.letters = self.view.canvas.create_text(*pos, text=letters, font=font, fill=color)
             if model.number:
                 pos = (x*s + NUMBER_LEFT, y*s + NUMBER_TOP)
@@ -279,14 +316,14 @@ class PuzzleController(SubController):
     def insert_letter(self, letter: str):
         # If there is a current cell
         if self.current:
-            self.current.owner = self.player
+            self.current.owner = self.player.id
             if letter == " ":
                 self.current.letters = ""
             elif letter in string.ascii_lowercase:
                 self.current.letters = letter.upper()
             elif letter in string.ascii_uppercase:
                 self.current.letters += letter.upper()
-            self.parent.connection.emit(LETTER_INSERTED, self.current.letters)
+            self.parent.connection.emit(LETTER_INSERTED, (self.player.x, self.player.y,  self.current.letters))
             self.draw(self.current)
 
     def remove_letter(self):
