@@ -2,6 +2,16 @@ import puz
 from .constants import *
 
 
+# Convenience
+def to_position(i: int, w: int) -> tuple:
+    y, x = divmod(i, w)
+    return x, y
+
+
+def to_index(x: int, y: int, w: int) -> int:
+    return y*w + x
+
+
 class DrawingsModel:
     """Basic container class for a canvas drawing group."""
 

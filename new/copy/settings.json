@@ -1,0 +1,33 @@
+{
+  "window": {
+	"line-fill": "grey70",
+	"clock-color": "grey70",
+	"font-color": "black",
+	"title-font": ["tkDefaultFont", 25],
+	"header-font": ["tkDefaultFont", 20],
+	"label-font": ["tkDefaultFont", 15],
+	"list-font": ["tkDefaultFont", 10],
+	"chat-font": ["tkDefaultFont", 0],
+	"font-size-modifier": 0
+  },
+  "board": {
+	"cell-size": 33,
+	"font-family": "tkDefaultFont",
+	"deselected-fill": "white",
+	"selected-word-fill": "light blue",
+	"selected-letter-fill": "yellow",
+	"empty-fill": "black",
+	"correct-fill": "green",
+	"incorrect-fill": "red"
+  },
+  "controls": {
+	"on-double-arrow-key": ["move in direction", "stay in cell"],
+	"on-space-key": ["clear and skip", "change direction"],
+	"on-enter-key": ["next word"],
+	"on-tab-key": ["next word"],
+	"on-last-letter-go-to": ["next word", "first cell", "same cell"],
+	"on-filled-letter": ["skip", "stay"]
+  }
+}
+
+

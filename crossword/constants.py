@@ -17,16 +17,6 @@ __version__ = "0.2.0"
 __status__ = "Development"
 
 
-# Convenience
-def to_position(i: int, w: int) -> tuple:
-    y, x = divmod(i, w)
-    return x, y
-
-
-def to_index(x: int, y: int, w: int) -> int:
-    return y*w + x
-
-
 # Settings
 ROOT_DIRECTORY = os.path.abspath(os.path.dirname(__file__))
 SETTINGS_PATH = os.path.join(ROOT_DIRECTORY, "settings.json")

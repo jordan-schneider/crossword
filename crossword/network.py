@@ -37,7 +37,7 @@ def _recv(sock: socket.socket, size: int) -> bytes:
 
 # Socket wrapper classes
 class SocketHandler:
-    """Socket server worker base class.
+    """Socket server worker copy class.
     
     The socket handler deals with sending and receiving messages from
     the connected client.

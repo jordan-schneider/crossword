@@ -975,7 +975,7 @@ class Server:
                     message = self.messages.get()
                     self.handle(message)
             except Exception as e:
-                logging.log(ERROR, "%s error in serve loop: %s", repr(self), e)
+                logging.log(ERROR, "%s error in store loop: %s", repr(self), e)
                 self.stop()
 
     def handle(self, message):

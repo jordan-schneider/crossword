@@ -1,2 +1,0 @@
-import crossword
-crossword.main()

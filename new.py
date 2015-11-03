@@ -33,7 +33,7 @@ NORMAL = "normal"
 ABSOLUTE = "absolute"
 
 # Configuration
-file = open("config.json")
+file = open("settings.json")
 config = json.load(file)
 
 # Generated configuration
