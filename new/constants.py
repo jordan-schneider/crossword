@@ -1,6 +1,6 @@
 """Crossword Application Constants.
 
-This module is not to be confused with the `settings` module, which
+This module is not to be confused with the settings module, which
 handles user-configurable options. Constants is instead a set of
 options set by the developer.
 """
@@ -10,11 +10,9 @@ import os as _os
 
 # File system reference
 ROOT = _os.path.abspath(_os.path.dirname(__file__))
-SETTINGS = "settings.json"
+SETTINGS = "settings.xml"
 PLAYERS = "players.json"
-
-# Graphical constants
-
+COPY = "copy"
 
 
 
