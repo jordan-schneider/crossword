@@ -1,1 +1,1 @@
-import new.settings
+from new.settings.settings import *

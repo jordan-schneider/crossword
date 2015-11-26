@@ -1,4 +1,5 @@
 import os
-from .constants import *
+
+from new.constants import *
 
 os.chdir(ROOT)

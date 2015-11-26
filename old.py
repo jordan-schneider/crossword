@@ -45,7 +45,7 @@ def get_any_value(string):
 
 class Config:
     """The configuration namespace. This is a container for all of the configurable and non-configurable options for the
-    crossword app. It also has a method that reads from and dump to a configuration file, but this is only used for
+    crossword application. It also has a method that reads from and dump to a configuration file, but this is only used for
     initial configuration and changes made by the user in the settings menu."""
 
     CELL_SIZE = 33
