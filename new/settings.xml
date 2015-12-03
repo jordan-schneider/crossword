@@ -1,7 +1,10 @@
 <settings>
 	<page name="view" description="Graphical settings">
 		<section name="header" description="Header">
-			<option name="font" description="Font" mode="rw" type="font" cast="font">tkDefaultFont, 25</option>
+			<option name="font" description="Font" mode="rw" type="font" cast="font">
+				<family>tkDefaultFont</family>
+				<size>25</size>
+			</option>
 			<option name="fg" description="Color" mode="rw" type="color" cast="str">black</option>
             <section name="separator" description="Separator">
                 <option name="height" description="Height" mode="rw" type="natural" cast="int">1</option>
@@ -22,27 +25,55 @@
         	</section>
         </section>
 		<section name="clues" description="Clues">
-			<option name="font" description="Font" mode="rw" type="font" cast="eval">tkDefaultFont, 10</option>
+			<option name="font" description="Font" mode="rw" type="font" cast="eval">
+				<family>tkDefaultFont</family>
+				<size>10</size>
+			</option>
 			<option name="fg" description="Color" mode="rw" type="color" cast="str">black</option>
 		</section>
 		<section name="chat" description="Chat">
-			<option name="font" description="Font" mode="rw" type="font" cast="eval">tkDefaultFont, 0</option>
+			<option name="font" description="Font" mode="rw" type="font" cast="font">
+				<family>tkDefaultFont</family>
+				<size>0</size>
+			</option>
 			<option name="fg" description="Color" mode="rw" type="color" cast="str">black</option>
 			<option name="colors" description="Use chat colors" mode="rw" type="boolean" cast="bool">True</option>
 		</section>
 	</page>
 	<page name="controller" description="Controls">
 		<section name="behavior" description="Behaviors">
-			<option name="on_double_arrow" description="On double arrow key" mode="rw" type="choice" cast="choice">move in direction/stay in cell</option>
-            <option name="on_space" description="On space key" mode="rw" type="choice" cast="choice">clear and skip/change direction</option>
-            <option name="on_enter" description="On enter key" mode="rw" type="choice" cast="choice">next word</option>
-            <option name="on_tab" description="On tab key" mode="rw" type="choice" cast="choice">next word</option>
-            <option name="on_last_letter" description="On last letter go to" mode="rw" type="choice" cast="choice">next word/first cell/same cell</option>
-            <option name="on_filled_letter" description="On filled letter" mode="rw" type="choice" cast="choice">go to next cell/stay in cell</option>
+			<option name="on_double_arrow" description="On double arrow key" mode="rw" type="choice" cast="choice">
+				0
+				<choice>move in direction</choice>
+				<choice>stay in cell</choice>
+			</option>
+            <option name="on_space" description="On space key" mode="rw" type="choice" cast="choice">
+				0
+				<choice>clear and skip</choice>
+				<choice>change direction</choice>
+			</option>
+            <option name="on_enter" description="On enter key" mode="rw" type="choice" cast="choice">
+				0
+				<choice>next word</choice>
+			</option>
+            <option name="on_tab" description="On tab key" mode="rw" type="choice" cast="choice">
+				0
+				<choice>next word</choice>
+			</option>
+            <option name="on_last_letter" description="On last letter go to" mode="rw" type="choice" cast="choice">
+				0
+				<choice>next word</choice>
+				<choice>first cell</choice>
+				<choice>same cell</choice>
+			</option>
+            <option name="on_filled_letter" description="On filled letter" mode="rw" type="choice" cast="choice">
+				0
+				<choice>go to next cell</choice>
+				<choice>stay in cell</choice>
+			</option>
 		</section>
 	</page>
-    <page name="model" description="Data">
-    </page>
+    <page name="model" description="Data"></page>
 </settings>
 
 

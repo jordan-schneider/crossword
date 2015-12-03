@@ -12,7 +12,7 @@ import os as _os
 ROOT = _os.path.abspath(_os.path.dirname(__file__))
 SETTINGS = "settings.xml"
 PLAYERS = "players.json"
-COPY = "copy"
+COPY = "default"
 
 
 

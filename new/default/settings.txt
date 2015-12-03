@@ -1,0 +1,16 @@
+view.header.font = tkDefaultFont, 25
+view.header.fg = black
+view.header.separator.height = 1
+view.header.separator.fg = black
+view.puzzle.bg = white
+view.puzzle.cell.size = 33
+view.puzzle.colors.letter = yellow
+view.puzzle.colors.word = light blue
+view.puzzle.colors.empty = black
+view.puzzle.colors.correct = green
+view.puzzle.colors.incorrect = red
+view.clues.font = tkDefaultFont, 10
+view.clues.fg = black
+view.chat.font = tkDefaultFont, 0
+view.chat.fg = black
+view.chat.colors = true

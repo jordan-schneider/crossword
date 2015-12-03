@@ -1,15 +1,27 @@
+database = {}
+
+
 class Access:
 
     def __init__(self):
         self._cache = []
+        database[id(self)] = self._cache
+
+    def __setattr__(self, key, value):
+        if key == "_cache":
+            raise KeyError("Cannot overwrite  `_cache` of Access")
+        self._cache.append(key)
+        super().__setattr__(key, value)
 
     def __getattribute__(self, key):
-        if key.startswith("_"):
+        try:
             return super().__getattribute__(key)
-        self._cache.append(key)
-        return self
+        except AttributeError:
+            access = Access()
+            self.__setattr__(key, access)
+            self._cache.append(key)
+        return access
 
     def __repr__(self):
-        qualified = ".".join(self._cache)
-        self._cache = []
-        return qualified
+        return "{" + ", ".join(self._cache) + "}"
+
