@@ -1,2 +1,1 @@
-from . import cast
-from . import settings
+from .loader import settings, crossword

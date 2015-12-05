@@ -1,1 +1,1 @@
-from new.settings.settings import *
+from new.settings.loader import *

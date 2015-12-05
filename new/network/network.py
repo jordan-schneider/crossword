@@ -1,8 +1,7 @@
 __author__ = 'Noah'
 
 # Network constants
-DEFAULT_HOST = "127.0.0.1"
-DEFAULT_PORT = 50000
+
 
 # Network events
 CLIENT_JOINED = "client joined"

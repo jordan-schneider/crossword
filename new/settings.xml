@@ -1,5 +1,5 @@
 <settings>
-	<page name="view" description="Graphical settings">
+	<page name="appearance" description="Graphical settings">
 		<section name="header" description="Header">
 			<option name="font" description="Font" mode="rw" type="font">
 				<family>tkDefaultFont</family>
@@ -40,7 +40,7 @@
 			<option name="colors" description="Use chat colors" mode="rw" type="boolean">True</option>
 		</section>
 	</page>
-	<page name="controller" description="Controls">
+	<page name="controls" description="Controls">
 		<section name="behavior" description="Behaviors">
 			<option name="on_double_arrow" description="On double arrow key" mode="rw" type="choice">
 				0
@@ -73,7 +73,12 @@
 			</option>
 		</section>
 	</page>
-    <page name="model" description="Data"></page>
+    <page name="network" description="Networking">
+		<section name="server" description="Server settings">
+			<option name="ip" description="Server IP address" mode="rw" type="ip">127.0.0.1</option>
+			<option name="port" description="Server port" mode="rw" type="port">50000</option>
+		</section>
+	</page>
 </settings>
 
 
