@@ -38,10 +38,10 @@ class DualWordAccess:
 
 
 class CellModel:
-    """Basic container class for a single crossword cell."""
+    """Basic container class for a single old cell."""
 
     def __init__(self, x: int, y: int, kind: str, solution: str):
-        """Initialize a new cell container."""
+        """Initialize a crossword cell container."""
         # Set by fill and solution
         self.x = x
         self.y = y
@@ -62,10 +62,10 @@ class CellModel:
 
 
 class CellsAccess:
-    """Basic matrix-like container for a crossword board's cells."""
+    """Basic matrix-like container for a old board's cells."""
 
     def __init__(self, puzzle: puz.Puzzle):
-        """Initialize a new cells container."""
+        """Initialize a crossword cells container."""
         self._width = puzzle.width
         self.cells = []
         zipped = list(zip(puzzle.fill, puzzle.solution))
@@ -88,10 +88,10 @@ class CellsAccess:
 
 
 class WordModel:
-    """Basic container class for a single crossword cell."""
+    """Basic container class for a single old cell."""
 
     def __init__(self, direction: str, number: int, clue: int):
-        """Initialize a new cell container."""
+        """Initialize a crossword cell container."""
         # Basic word data
         self.direction = direction
         self.number = number
@@ -112,7 +112,7 @@ class WordsAccess:
     """Basic container for a list of words."""
 
     def __init__(self, puzzle: puz.Puzzle, cells: CellsAccess):
-        """Initialize a new words container."""
+        """Initialize a crossword words container."""
         self.words = []
         self.across = []
         self.down = []
@@ -154,10 +154,10 @@ class WordsAccess:
 
 
 class PuzzleModel:
-    """Basic container class for a single crossword cell."""
+    """Basic container class for a single old cell."""
 
     def __init__(self, puzzle: puz.Puzzle):
-        """Initialize a new cell container with a puzzle."""
+        """Initialize a crossword cell container with a puzzle."""
         # Basic puzzle data
         self.title = puzzle.title
         self.author = puzzle.author

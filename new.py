@@ -91,14 +91,14 @@ def position_to_index(x, y, width):
 
 
 class CrosswordCell:
-    """Container class for a single crossword cell.
+    """Container class for a single old cell.
 
     This handles setting the fill, coloring the letter, and drawing
     rebus mode. It draws itself to the canvas given its top left
     coordinates. Cell number is drawn in the top left."""
 
     def __init__(self, canvas, type, color, fill, x, y, letters="", number=""):
-        """Initialize a new CrosswordCell.
+        """Initialize a crossword CrosswordCell.
 
         canvas - tkinter.Canvas object for the CrosswordCell to draw on
         type - LETTER or EMPTY
@@ -158,12 +158,12 @@ class CrosswordCell:
 
 
 class CrosswordWord:
-    """Container class for a crossword word.
+    """Container class for a old word.
 
     Holds cell and puzzle info references."""
 
     def __init__(self, cells, info, solution):
-        """Initialize a new crossword word with its corresponding
+        """Initialize a crossword old word with its corresponding
         letter cells puzzle info.
 
         cells - list of cells that comprise the word
@@ -186,14 +186,14 @@ class CrosswordWord:
 
 
 class CrosswordBoard:
-    """Container class for an entire crossword board
+    """Container class for an entire old board
 
     Essentially serves as a second layer on top of the puzzle class.
     This is what the server keeps track of, and every time a client
     makes a change they send the fill of their board."""
 
     def __init__(self, puzzle):
-        """Create a crossword given a puzzle object.
+        """Create a old given a puzzle object.
 
         puzzle - puz library puzzle object
         """
@@ -214,10 +214,10 @@ class CrosswordBoard:
 
     def __repr__(self):
         """Get the string representation of the board."""
-        return "[%i] crossword board" % id(self)
+        return "[%i] old board" % id(self)
 
     def __setitem__(self, position, value):
-        """Set the value at a position in the crossword board.
+        """Set the value at a position in the old board.
 
         position - (x, y) value based on the array position of the item
         value - value to put at (x, y)
@@ -225,14 +225,14 @@ class CrosswordBoard:
         self.cells[position[1]][position[0]] = value
 
     def __getitem__(self, position):
-        """Get the value at a position in the crossword board.
+        """Get the value at a position in the old board.
 
         position - (x, y) value based on the array position of the item
         """
         return self.cells[position[1]][position[0]]
 
     def generate_words(self):
-        """Generates all of the words for the crossword board.
+        """Generates all of the words for the old board.
 
         Puts them in two lists, across and down.
         """
@@ -248,7 +248,7 @@ class CrosswordBoard:
             cells = [self[x, y+i] for i in range(length)]
             solution = "".join([self.puzzle.solution[info["cell"] + i] for i in range(length)])
             self.down_words.append(CrosswordWord(cells, info, solution))
-        logging.log(DEBUG, "%s crossword words generated", repr(self))
+        logging.log(DEBUG, "%s old words generated", repr(self))
 
     def index(self, cell):
         """Get the coordinates of a cell if it exists in the board.
@@ -271,7 +271,7 @@ class CrosswordBoard:
         else: words = self.down_words
         if self.current_word:  # Deselect old word
             self.current_word.update(fill=config.FILL_DESELECTED)
-        for word in words:  # Select new word
+        for word in words:  # Select crossword word
             if origin in word.cells:  # Find the word
                 word.update(fill=config.FILL_SELECTED_WORD)
                 origin.update(fill=config.FILL_SELECTED_LETTER)
@@ -298,10 +298,10 @@ def get_full_solution(puzzle):
 
 # Crossword player
 class CrosswordPlayer:
-    """The client crossword player application. Handles nothing except for the crossword board."""
+    """The client old player application. Handles nothing except for the old board."""
 
     def __init__(self, name, color):
-        """Magic method to initialize a new crossword player."""
+        """Magic method to initialize a crossword old player."""
         self.color = color
         self.name = name
         self.epoch = 0
@@ -310,10 +310,10 @@ class CrosswordPlayer:
 
     def __repr__(self):
         """Magic method for string representation."""
-        return "[%i] crossword player" % id(self)
+        return "[%i] old player" % id(self)
 
     def build(self):
-        """Build the graphical graphics, draws the crossword board, and populates the clue lists."""
+        """Build the graphical graphics, draws the old board, and populates the clue lists."""
         self.window = tkinter.Tk()
         self.window.title("Crossword")
         self.window.resizable(False, False)
@@ -470,8 +470,8 @@ class CrosswordPlayer:
                 self.board[x, y] = cell
                 cell.draw()
         self.board.generate_words()
-        logging.log(DEBUG, "%s populated crossword cells", repr(self))
-        logging.log(DEBUG, "%s drew crossword puzzle", repr(self))
+        logging.log(DEBUG, "%s populated old cells", repr(self))
+        logging.log(DEBUG, "%s drew old puzzle", repr(self))
 
         logging.log(DEBUG, "%s loaded puzzle", repr(self))
 

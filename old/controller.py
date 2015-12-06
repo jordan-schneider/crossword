@@ -13,7 +13,7 @@ from .constants import *
 class Controller:
 
     def __init__(self):
-        """Initialize a new controller, its network connection, and its
+        """Initialize a crossword controller, its network connection, and its
         sub-controllers."""
         # Queue and bindings
         self.queue = queue.Queue()
@@ -89,7 +89,7 @@ class Controller:
         self.view.root.after(50, self.update)
 
     def main(self):
-        """Run the crossword application."""
+        """Run the old application."""
         self.update()
         self.view.main()
         self.connection.stop()
@@ -151,7 +151,7 @@ class Controller:
 class SubController:
 
     def __init__(self, parent: Controller):
-        """Initialize a new sub-controller."""
+        """Initialize a crossword sub-controller."""
         self.parent = parent
 
     @property  # This is a property because the model is not permanent
@@ -300,10 +300,10 @@ class PuzzleController(SubController):
                 elif y >= self.model.height:
                     y = 0
                     x = (x + (not absolute)) % self.model.width
-            # Subtract the step if the new cell is a letter cell
+            # Subtract the step if the crossword cell is a letter cell
             if self.model.cells[x, y].kind == LETTER:
                 distance -= step
-        # Select a new cell
+        # Select a crossword cell
         self.select_cell(x, y)
 
     def move_word(self, count=1):

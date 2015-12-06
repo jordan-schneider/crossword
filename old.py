@@ -45,7 +45,7 @@ def get_any_value(string):
 
 class Config:
     """The configuration namespace. This is a container for all of the configurable and non-configurable options for the
-    crossword application. It also has a method that reads from and dump to a configuration file, but this is only used for
+    old application. It also has a method that reads from and dump to a configuration file, but this is only used for
     initial configuration and changes made by the user in the settings menu."""
 
     CELL_SIZE = 33
@@ -167,11 +167,11 @@ def position_to_index(x, y, array_width):
     return x + y*array_width
 
 class Cell:
-    """Container class for a single crossword cell. This handles setting the fill, coloring the letter, and drawing
+    """Container class for a single old cell. This handles setting the fill, coloring the letter, and drawing
     rebus mode. It draws itself to the canvas given its top left coordinates. Cell number is drawn in the top left."""
 
     def __init__(self, canvas, type, color, fill, x, y, letters="", number=""):
-        """Magic method to initialize a new crossword cell."""
+        """Magic method to initialize a crossword old cell."""
         self.canvas = canvas  # Tkinter Canvas from the main application
         self.type = type  # Letter or number
         self.color = color  # Letter color
@@ -214,10 +214,10 @@ class Cell:
         self.draw_to_canvas()
 
 class Word:
-    """Container class for a crossword word that holds cell and puzzle info references."""
+    """Container class for a old word that holds cell and puzzle info references."""
 
     def __init__(self, cells, info, solution):
-        """Initialize a new crossword word with its corresponding letter cells puzzle info."""
+        """Initialize a crossword old word with its corresponding letter cells puzzle info."""
         self.cells = cells
         self.info = info
         self.solution = solution
@@ -227,11 +227,11 @@ class Word:
         for cell in self.cells: cell.update(**options)
 
 class Board:
-    """Container class for an entire crossword board. Essentially serves as a second layer on top of the puzzle class.
+    """Container class for an entire old board. Essentially serves as a second layer on top of the puzzle class.
     This is what the server keeps track of, and every time a client makes a change they send the fill of their board."""
 
     def __init__(self, puzzle, numbering):
-        """Create a crossword given a puzzle object."""
+        """Create a old given a puzzle object."""
         self.puzzle = puzzle
         self.numbering = numbering
 
@@ -250,7 +250,7 @@ class Board:
 
     def __repr__(self):
         """Magic method for string representation."""
-        return "[%i] crossword board" % id(self)
+        return "[%i] old board" % id(self)
 
     def __setitem__(self, position, value):
         """Magic method for coordinate based index setting."""
@@ -261,11 +261,11 @@ class Board:
         return self.cells[position[1]][position[0]]
 
     def index(self, cell):
-        """Get the coordinates of a cell if it exists in the crossword board."""
+        """Get the coordinates of a cell if it exists in the old board."""
         return index_to_position(sum(self.cells, []).index(cell), self.puzzle.width)
 
     def generate_words(self):
-        """Generates all of the words for the crossword board and puts them in two lists."""
+        """Generates all of the words for the old board and puts them in two lists."""
         for info in self.numbering.across:
             x, y = index_to_position(info["cell"], self.puzzle.width)
             length = info["len"]
@@ -278,7 +278,7 @@ class Board:
             cells = [self[x, y+i] for i in range(length)]
             solution = "".join([self.puzzle.solution[info["cell"] + i] for i in range(length)])
             self.down_words.append(Word(cells, info, solution))
-        logging.log(DEBUG, "%s crossword words generated", repr(self))
+        logging.log(DEBUG, "%s old words generated", repr(self))
 
     def set_selected(self, x, y, direction):
         """Set the word at the position of the origin letter (and of the direction) as selected."""
@@ -287,7 +287,7 @@ class Board:
         else: words = self.down_words
         if self.current_word:  # Deselect old word
             self.current_word.update(fill=config.FILL_DESELECTED)
-        for word in words:  # Select new word
+        for word in words:  # Select crossword word
             if origin in word.cells:  # Find the word
                 word.update(fill=config.FILL_SELECTED_WORD)
                 origin.update(fill=config.FILL_SELECTED_LETTER)
@@ -324,16 +324,16 @@ def is_chat_string_allowed(string):
     return True
 
 class Player:
-    """The client crossword player application. Handles nothing except for the crossword board."""
+    """The client old player application. Handles nothing except for the old board."""
 
     def __init__(self, name, color):
-        """Magic method to initialize a new crossword player."""
+        """Magic method to initialize a crossword old player."""
         self.color = color
         self.name = name
 
     def __repr__(self):
         """Magic method for string representation."""
-        return "[%i] crossword player" % id(self)
+        return "[%i] old player" % id(self)
 
     def load_puzzle(self, puzzle):
         """Load a puzzle to the window."""
@@ -347,7 +347,7 @@ class Player:
         logging.log(DEBUG, "%s loaded puzzle", repr(self))
 
     def build_application(self):
-        """Build the graphical interface, draws the crossword board, and populates the clue lists."""
+        """Build the graphical interface, draws the old board, and populates the clue lists."""
         self.window = tkinter.Tk()
         self.window.title(config.WINDOW_TITLE)
         self.window.resizable(False, False)
@@ -498,8 +498,8 @@ class Player:
                     self.board[x, y] = cell
                     cell.draw_to_canvas()
             self.board.generate_words()
-            logging.log(DEBUG, "%s populated crossword cells", repr(self))
-            logging.log(DEBUG, "%s drew crossword puzzle", repr(self))
+            logging.log(DEBUG, "%s populated old cells", repr(self))
+            logging.log(DEBUG, "%s drew old puzzle", repr(self))
 
         for info in self.numbering.across: self.across_list.insert("end", " %(num)i. %(clue)s" % info)
         for info in self.numbering.down: self.down_list.insert("end", " %(num)i. %(clue)s" % info)
@@ -680,7 +680,7 @@ class Player:
         self.move_current_selection(self.direction, -distance, force_next_word=True)
 
     def event_key(self, event):
-        """Key event for the entire crossword player since canvas widgets have no active state. To add rebus characters,
+        """Key event for the entire old player since canvas widgets have no active state. To add rebus characters,
         the shift key is used."""
         if self.paused: return
 
@@ -851,7 +851,7 @@ class Handler:
     """Server side client handler. Continuously receives data while offering simultaneous sending."""
 
     def __init__(self, sock, address, server):
-        """Magic method to initialize a new handler."""
+        """Magic method to initialize a crossword handler."""
         self.socket = sock
         self.address = address
         self.server = server
@@ -898,10 +898,10 @@ class Handler:
         logging.log(INFO, "%s stopped", repr(self))
 
 class Server:
-    """A simple server for hosting a local network multiplayer crossword game."""
+    """A simple server for hosting a local network multiplayer old game."""
 
     def __init__(self, address, puzzle):
-        """Magic method to initialize a new server."""
+        """Magic method to initialize a crossword server."""
         self.address = address
 
         self.messages = queue.Queue()
@@ -1039,10 +1039,10 @@ class Server:
         logging.log(INFO, "%s shut down", repr(self))
 
 class Client(Player):
-    """A networking framework built on top of the existing crossword player."""
+    """A networking framework built on top of the existing old player."""
 
     def __init__(self, address, name, color):
-        """Initialize a new, named client connecting to a server address."""
+        """Initialize a crossword, named client connecting to a server address."""
         Player.__init__(self, name, color)
 
         self.address = address
@@ -1102,7 +1102,7 @@ class Client(Player):
                 if self.active: self.stop()
 
     def update(self):
-        """Update the graphical interface when there are new messages."""
+        """Update the graphical interface when there are crossword messages."""
         if not self.active: self.destroy_application()  # Make sure the application is killed if inactive
         while not self.messages.empty():
             message = self.messages.get()
@@ -1163,7 +1163,7 @@ class Client(Player):
         logging.log(DEBUG, "%s stopped", repr(self))
 
 class Menu:
-    """Start menu for the crossword program."""
+    """Start menu for the old program."""
 
     def __init__(self):
         """Magic method for initialization of the menu."""

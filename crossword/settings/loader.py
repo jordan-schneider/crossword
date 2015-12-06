@@ -23,7 +23,7 @@ def _settings(path, parent):
             return _settings(path, child)
     return None
 
-crossword = utility.fancy.Access("crossword")
+crossword = utility.fancy.Access("old")
 
 
 class Settings:
@@ -36,7 +36,3 @@ class Settings:
         return translate.cast(node)
 
 settings = Settings()
-
-
-
-

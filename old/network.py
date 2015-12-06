@@ -44,7 +44,7 @@ class SocketHandler:
     """
 
     def __init__(self, sock: socket.socket, address: str, server):
-        """Initialize a new socket handler."""
+        """Initialize a crossword socket handler."""
         self.sock = sock
         self.address = address
         self.server = server

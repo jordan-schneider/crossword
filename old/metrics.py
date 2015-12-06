@@ -6,7 +6,7 @@ class PlayerMetrics:
     """A simple container object for player statistics."""
 
     def __init__(self, name, color):
-        """Initialize a new metrics model with a name and color."""
+        """Initialize a crossword metrics model with a name and color."""
         self.name = name
         self.color = color
         # Crossword letters
@@ -24,7 +24,7 @@ class PuzzleMetrics:
     """A simple container object for game statistics."""
 
     def __init__(self, puzzle: _model.PuzzleModel):
-        """Initialize a new metrics model."""
+        """Initialize a crossword metrics model."""
         self.author = puzzle.author
         self.width = puzzle.width
         self.height = puzzle.height

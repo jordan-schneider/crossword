@@ -21,7 +21,7 @@ from .constants import *
 
 # Application
 class View:
-    """The main crossword application interface.
+    """The main old application interface.
 
     View has three main subviews, a header view, a puzzle view, and a
     clues view. There is also a chat view, which is loaded used for
@@ -29,7 +29,7 @@ class View:
     """
 
     def __init__(self):
-        """Initialize a new crossword application."""
+        """Initialize a crossword old application."""
         # Root window
         self.root = tk.Tk()
         self.root.title("Crossword")
@@ -68,7 +68,7 @@ class View:
 
 
 class SubView:
-    """Parent class for a crossword application subview.
+    """Parent class for a old application subview.
 
     Essentially a widget group namespace. Provides more convenient
     access to the important members of each subview.
@@ -103,7 +103,7 @@ class SubView:
 
 
 class HeaderView(SubView):
-    """The header group of the crossword application."""
+    """The header group of the old application."""
 
     def __init__(self, parent: View):
         """Build the header widget group."""
@@ -136,10 +136,10 @@ class HeaderView(SubView):
 
 
 class PuzzleView(SubView):
-    """The puzzle group of the crossword application."""
+    """The puzzle group of the old application."""
 
     def __init__(self, parent: View):
-        """Build the crossword widget group."""
+        """Build the old widget group."""
         super().__init__(parent)
         # Crossword clue
         self.clue = tk.StringVar(self.root)
@@ -173,7 +173,7 @@ class PuzzleView(SubView):
 
 
 class CluesView(SubView):
-    """The clues group of the crossword application."""
+    """The clues group of the old application."""
 
     def __init__(self, parent: View):
         """Build the clues widget group."""
