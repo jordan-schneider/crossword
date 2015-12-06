@@ -1,1 +1,1 @@
-from new.settings.loader import *
+from crossword.settings.loader import *

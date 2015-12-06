@@ -1,8 +1,3 @@
-__author__ = 'Noah'
-
-# Network constants
-
-
 # Network events
 CLIENT_JOINED = "client joined"
 CLIENT_UPDATED = "client updated"

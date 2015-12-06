@@ -21,5 +21,10 @@ class Access:
         self._cache = self._start[:]
         return iter(copy)
 
+    def __str__(self):
+        copy = self._cache[:]
+        self._cache = self._start[:]
+        return ".".join(copy)
+
     def __repr__(self):
         return ".".join(self)

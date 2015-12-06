@@ -1,11 +1,12 @@
 # Import
 import xml.etree.ElementTree
+import collections
 import os
 
 from . import translate
-from new import utility
-from new import system
-from new.constants import *
+from crossword import utility
+from crossword import system
+from crossword.constants import *
 
 
 # Read the resource
@@ -14,25 +15,58 @@ system.resource.ease(SETTINGS, copy=copy).close()
 tree = xml.etree.ElementTree.parse(SETTINGS).getroot()
 
 
-def _settings(path, parent):
-    if not path:
-        return parent
-    for child in parent.getchildren():
-        if child.get("name") == path[0]:
-            path.pop(0)
-            return _settings(path, child)
-    return None
+# Define some useful containers
+class Node:
 
-crossword = utility.fancy.Access("old")
+    __dir = []
+
+    def __setattr__(self, key, value):
+        super().__setattr__(key, value)
+        if not key.startswith("_"):
+            self.__dir.append(key)
+
+    def __iter__(self):
+        return iter(getattr(self, name) for name in self.__dir)
 
 
-class Settings:
+class Settings(Node):
 
-    def __getitem__(self, access: utility.fancy.Access):
-        path = list(access)[1:]  # Ignore settings prefix
-        node = _settings(path, tree)
-        if node is None:
-            return None
-        return translate.cast(node)
+    __src = None
+    __map = {}
 
-settings = Settings()
+    def __init__(self, source: xml.etree.ElementTree.ElementTree):
+        self.__src = source
+
+    def __getitem__(self, item):
+        if isinstance(item, collections.Iterable):
+            item = ".".join(item)
+        elif type(item) == utility.fancy.Access:
+            item = str(item)
+        return self.__map[item]
+
+    def __setitem__(self, key, value):
+        self.__map[key] = value
+
+
+settings = Settings(tree)
+
+
+def load():
+    _load(tree, "", settings)
+
+
+def _load(node, path, cursor):
+    for child in node:
+        name = child.get("name")
+        path = name if not path else ".".join([path, name])
+        if child.tag == "option":
+            value = translate.cast(child)
+            setattr(cursor, name, value)
+            settings[path] = value
+        else:
+            descendant = type(child.tag, (Node,), {})
+            setattr(cursor, name, descendant)
+            _load(child, path, descendant)
+
+
+load()

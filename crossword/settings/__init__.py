@@ -1,1 +1,1 @@
-from .loader import settings, crossword
+from .loader import settings

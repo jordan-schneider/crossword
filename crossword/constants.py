@@ -13,15 +13,3 @@ ROOT = _os.path.abspath(_os.path.dirname(__file__))
 SETTINGS = "settings.xml"
 PLAYERS = "players.json"
 COPY = "default"
-
-
-
-
-
-
-
-
-
-
-
-

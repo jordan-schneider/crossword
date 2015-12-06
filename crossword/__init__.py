@@ -1,5 +1,5 @@
 import os
 
-from new.constants import *
+from crossword.constants import *
 
 os.chdir(ROOT)
