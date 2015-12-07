@@ -197,11 +197,22 @@ class PlayerModel:
 
     def __init__(self, name: str, color: str):
         """Initialize a player profile model."""
-        self.name = name
-        self.color = color
+        self.custom = {}
         # Defined by server
         self.id = 0
         # Already set
         self.direction = ACROSS
         self.x = 0
         self.y = 0
+
+    def update(self, **options):
+        self.custom.update(options)
+
+    def get(self, item, default=None):
+        return self.custom.get(item, default)
+
+    def __getitem__(self, item):
+        return self.custom.get(item, None)
+
+    def __setitem__(self, key, value):
+        self.custom[key] = value
