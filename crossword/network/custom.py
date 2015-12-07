@@ -31,6 +31,10 @@ class CrosswordServer(wrapper.SocketServer):
         self.bind(PUZZLE_PASSED, self.on_puzzle_passed)
         self.bind(PUZZLE_SUBMITTED, self.on_puzzle_submitted)
         self.bind(CLIENT_UPDATED, self.on_client_updated)
+        logging.info("%s: bound custom events", self)
+
+    def __repr__(self):
+        return "server"
 
     def on_client_joined(self, data: dict, handler: CrosswordHandler):
         handler.model.name = data["name"]

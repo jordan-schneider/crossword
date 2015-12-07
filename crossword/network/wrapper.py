@@ -48,6 +48,10 @@ class SocketHandler:
         self.alive = False
 
         self._receive = threading.Thread(target=self.receive, daemon=True)
+        logging.info("%s: finished initialization", self)
+
+    def __repr__(self):
+        return "SocketHandler"
 
     def receive(self):
         """Receive loop that queues incoming messages."""
@@ -56,7 +60,7 @@ class SocketHandler:
                 event, data = pickle.loads(recv(self.sock))
                 self.server.queue.put((event, data, self))
             except Exception as e:
-                print("handler receive", e)
+                logging.error("%s receive caught '%s'", self, e)
                 self.server.queue.put((CLIENT_EXITED, None, self))
                 self.stop()
 
@@ -68,6 +72,7 @@ class SocketHandler:
         """Start the socket handler."""
         self.alive = True
         self._receive.start()
+        logging.info("%s: started receive loop", self)
 
     def stop(self):
         """Stop the socket handler."""
@@ -75,6 +80,7 @@ class SocketHandler:
         if self in self.server.handlers:
             self.server.handlers.remove(self)
         self.server.emit(CLIENT_EXITED, "")
+        logging.info("%s: all processes stopped", self)
 
 
 class SocketServer:
@@ -97,6 +103,10 @@ class SocketServer:
         self.bind("echo", self.echo)
 
         self._accept = threading.Thread(target=self.accept, daemon=True)
+        logging.info("%s: initialized and bound socket", self)
+
+    def __repr__(self):
+        return "SocketServer"
 
     def accept(self):
         while self.alive:
@@ -106,7 +116,7 @@ class SocketServer:
                 handler.start()
                 self.handlers.append(handler)
             except Exception as e:
-                print("server accept loop: " + e)
+                logging.error("%s: accept caught '%s'", self, e)
                 self.stop()
 
     def receive(self):
@@ -114,7 +124,7 @@ class SocketServer:
             event, data, handler = self.queue.get()
             function = self.bindings.get(event)
             if function is None:
-                print("caught event %s with no binding" % event)
+                logging.warning("%s: caught event '%s' with no binding", self, event)
             else:
                 function(data, handler)
 
@@ -127,17 +137,19 @@ class SocketServer:
         self.bindings[event] = function
 
     def echo(self, data, handler):
-        handler.emit("Echoed from " + self.address[0] + ":" + data)
+        handler.emit("echoed from " + self.address[0] + ": " + data)
 
     def start(self):
         self.alive = True
         self._accept.start()
+        logging.info("%s: started server loop", self)
         self.receive()
 
     def stop(self):
         self.alive = False
         for handler in self.handlers:
             handler.stop()
+        logging.info("%s: stopped all processes", self)
 
 
 class SocketConnection:

@@ -144,19 +144,20 @@ class Controller:
 
     def on_client_updated(self, data):
         """Called when a client is updated."""
+        pid, data = data
         for key in data:
             if key == POSITION:
-                pid, position = data[POSITION]
+                position = data[POSITION]
                 for player in self.players:
                     if player.id == pid:
                         player.x, player.y = position
             elif key == DIRECTION:
-                pid, direction = data[DIRECTION]
+                direction = data[DIRECTION]
                 for player in self.players:
                     if player.id == pid:
                         player.direction = direction
             elif key == LETTER:
-                pid, letter = data[LETTER]
+                letter = data[LETTER]
                 x, y, letters = letter
                 self.model.cells[x, y].letters = letters
                 for player in self.players:
@@ -350,14 +351,14 @@ class PuzzleController(SubController):
                 self.current.letters = letter.upper()
             elif letter in string.ascii_uppercase:
                 self.current.letters += letter.upper()
-            self.parent.connection.emit(PUZZLE_UPDATED, {LETTER: (self.player.x, self.player.y,  self.current.letters)})
+            self.parent.connection.emit(CLIENT_UPDATED, {LETTER: (self.player.x, self.player.y,  self.current.letters)})
             self.draw(self.current)
 
     def remove_letter(self):
         # If there is a current cell
         if self.current:
             self.current.letters = self.current.letters[:-1]
-            self.parent.connection.emit(PUZZLE_UPDATED, (self.player.x, self.player.y, self.current.letters))
+            self.parent.connection.emit(CLIENT_UPDATED, (self.player.x, self.player.y, self.current.letters))
             self.draw(self.current)
 
     def on_left_click(self, event):
