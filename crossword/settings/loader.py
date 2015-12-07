@@ -1,11 +1,9 @@
 # Import
 import xml.etree.ElementTree
-import collections
 import os
 
-from . import translate
-from crossword import utility
 from crossword import system
+from crossword.settings import translate
 from crossword.constants import *
 
 
@@ -18,37 +16,29 @@ tree = xml.etree.ElementTree.parse(SETTINGS).getroot()
 # Define some useful containers
 class Node:
 
-    __dir = []
+    def __init__(self):
+        self.__dir = []
+        self.__dir.clear()
 
     def __setattr__(self, key, value):
         super().__setattr__(key, value)
         if not key.startswith("_"):
             self.__dir.append(key)
 
-    def __iter__(self):
-        return iter(getattr(self, name) for name in self.__dir)
-
-
-class Settings(Node):
-
-    __src = None
-    __map = {}
-
-    def __init__(self, source: xml.etree.ElementTree.ElementTree):
-        self.__src = source
-
     def __getitem__(self, item):
-        if isinstance(item, collections.Iterable):
-            item = ".".join(item)
-        elif type(item) == utility.fancy.Access:
-            item = str(item)
-        return self.__map[item]
+        return getattr(self, item)
 
-    def __setitem__(self, key, value):
-        self.__map[key] = value
+    def __iter__(self):
+        base = [(name, getattr(self, name)) for name in self.__dir]
+        return iter(filter(lambda item: not isinstance(item[1], Node), base))
 
 
-settings = Settings(tree)
+Page = type("Page", (Node,), {})
+Section = type("Section", (Node,), {})
+Option = type("Option", (Node,), {})
+tag = {"page": Page, "section": Section, "option": Option}
+
+settings = Node()
 
 
 def load():
@@ -62,11 +52,7 @@ def _load(node, path, cursor):
         if child.tag == "option":
             value = translate.cast(child)
             setattr(cursor, name, value)
-            settings[path] = value
         else:
-            descendant = type(child.tag, (Node,), {})
+            descendant = tag[child.tag]()
             setattr(cursor, name, descendant)
             _load(child, path, descendant)
-
-
-load()

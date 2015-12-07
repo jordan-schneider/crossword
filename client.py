@@ -1,5 +1,5 @@
-from crossword import controller
+import crossword.application.controller
 
-application = controller.Controller()
+application = crossword.application.controller.Controller()
 application.main()
 print("stopped")

@@ -1,4 +1,4 @@
-"""Crossword Application Constants.
+"""Crossword constants.
 
 This module is not to be confused with the `settings` module, which
 handles user-configurable options. Constants is instead a set of

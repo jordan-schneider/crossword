@@ -3,20 +3,44 @@
 		<section name="header" description="Header">
 			<option name="font" description="Font" mode="rw" type="font">
 				<family>tkDefaultFont</family>
-				<size>25</size>
+				<size>20</size>
 			</option>
-			<option name="fg" description="Color" mode="rw" type="color">black</option>
+			<section name="title">
+				<option name="fg" description="Color" mode="rw" type="color">black</option>
+			</section>
+			<section name="author">
+				<option name="fg" description="Color" mode="rw" type="color">dark gray</option>
+			</section>
             <section name="separator" description="Separator">
                 <option name="height" description="Height" mode="rw" type="natural">1</option>
-                <option name="fg" description="Color" mode="rw" type="color">black</option>
+                <option name="bg" description="Color" mode="rw" type="color">black</option>
             </section>
         </section>
         <section name="puzzle" description="Puzzle">
+			<section name="clues" description="Clues">
+				<option name="font" description="Font" mode="rw" type="font">
+					<family>tkDefaultFont</family>
+					<size>15</size>
+				</option>
+				<option name="fg" description="Color" mode="rw" type="color">black</option>
+			</section>
+			<section name="time" description="Time">
+				<option name="font" description="Font" mode="rw" type="font">
+					<family>tkDefaultFont</family>
+					<size>15</size>{
+				</option>
+				<option name="fg" description="Color" mode="rw" type="color">dark gray</option>
+			</section>
         	<option name="bg" description="Background color" mode="rw" type="color">white</option>
+			<option name="fg" description="Foreground color" mode="rw" type="color">black</option>
+			<option name="font" description="Font" mode="rw" type="font">
+				<family>tkDefaultFont</family>
+				<size>15</size>
+			</option>
         	<section name="cell" description="Cells">
            		<option name="size" description="Size" mode="rw" type="natural">33</option>
         	</section>
-        	<section name="colors" description="Cell coloring">
+        	<section name="highlight" description="Cell coloring">
         		<option name="letter" description="Selected letter" mode="rw" type="color">yellow</option>
         		<option name="word" description="Selected word" mode="rw" type="color">light blue</option>
         		<option name="empty" description="Empty cell" mode="rw" type="color">black</option>
@@ -24,13 +48,21 @@
         		<option name="incorrect" description="Incorrect cell" mode="rw" type="color">red</option>
         	</section>
         </section>
-		<section name="clues" description="Clues">
+        <section name="clues" description="Clues">
 			<option name="font" description="Font" mode="rw" type="font">
 				<family>tkDefaultFont</family>
-				<size>10</size>
+				<size>15</size>
 			</option>
-			<option name="fg" description="Color" mode="rw" type="color">black</option>
-		</section>
+   			<option name="fg" description="Foreground color" mode="rw" type="color">black</option>
+            <section name="list" description="Clue list">
+                <option name="font" description="Font" mode="rw" type="font">
+                    <family>tkDefaultFont</family>
+                    <size>10</size>
+                </option>
+                <option name="selectbackground" description="Selected background color" mode="rw" type="color">light blue</option>
+                <option name="width" description="Clue box width" mode="rw" type="natural">35</option>
+            </section>
+        </section>
 		<section name="chat" description="Chat">
 			<option name="font" description="Font" mode="rw" type="font">
 				<family>tkDefaultFont</family>
@@ -42,6 +74,11 @@
 	</page>
 	<page name="controls" description="Controls">
 		<section name="behavior" description="Behaviors">
+			<option name="on_arrow" description="Arrow key movement" mode="rw" type="choice">
+				0
+				<choice>move cell</choice>
+				<choice>move absolute</choice>
+			</option>
 			<option name="on_double_arrow" description="On double arrow key" mode="rw" type="choice">
 				0
 				<choice>move in direction</choice>
@@ -70,6 +107,11 @@
 				0
 				<choice>go to next cell</choice>
 				<choice>stay in cell</choice>
+			</option>
+			<option name="on_backspace" description="On backspace go to" mode="rw" type="choice">
+				0
+				<choice>last cell</choice>
+				<choice>same cell</choice>
 			</option>
 		</section>
 	</page>
