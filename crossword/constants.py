@@ -63,3 +63,7 @@ PUZZLE_UPDATED = "puzzle updated"
 POSITION = "position"
 DIRECTION = "direction"
 CLIENTS = "clients"
+ID = "id"
+
+NAME = "name"
+COLOR = "color"

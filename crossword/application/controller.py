@@ -96,7 +96,6 @@ class Controller:
         """Update the controller."""
         if not self.queue.empty():
             event, data = self.queue.get()
-            logging.debug("%s: received event '%s'", self, event)
             function = self.bindings.get(event)
             if function is None:
                 logging.error("%s: caught event '%s' with no binding", self, event)
@@ -123,13 +122,18 @@ class Controller:
 
     def on_client_joined(self, data):
         """Called when a client joins the server."""
-        logging.info("%s: client '%s' joined server", self, data["name"])
+        logging.info("%s: client '%s' joined server", self, data[NAME])
 
     def on_server_updated(self, data):
         """Called when the server sends out updates."""
         for key in data:
             if key == CLIENTS:
+                print("Received clients: ", data[CLIENTS])
                 self.players = data[CLIENTS]
+            elif key == ID:
+                self.player.id = data[ID]
+                self.view.root.title("Joined as %s" % self.player[NAME])
+                self.view.show()
             else:
                 logging.error("%s: received invalid server update '%s'", self, key)
 
@@ -156,6 +160,10 @@ class Controller:
         """Called when a client is updated."""
         pid, data = data
         player = self.get_player(pid)
+
+        if not player:
+            logging.error("%s: could not find player %s", self, str(pid))
+            return
 
         for key in data:
             if key == POSITION:
@@ -243,7 +251,7 @@ class PuzzleController(SubController):
         d = settings.appearance.puzzle.bg
         e = settings.appearance.puzzle.highlight.empty
         for cell in self.model.cells:
-            cell.fill = d if cell.kind == LETTER else e
+            cell.update(fill=d if cell.kind == LETTER else e)
             self.draw(cell)
         logging.info("%s: loaded the puzzle view", self)
 
@@ -269,7 +277,7 @@ class PuzzleController(SubController):
                 letters = model.letters
                 font = (settings.appearance.puzzle.font[0], int(s / (1.1 + 0.6*len(model.letters)))-3)
                 player = self.parent.get_player(model.owner)
-                color = player.get("color", settings.appearance.puzzle.fg)
+                color = settings.appearance.puzzle.fg if not player else player[COLOR]
                 # Draw the letters
                 model.drawings.letters = self.view.canvas.create_text(*pos, text=letters, font=font, fill=color)
             # Draw cell number
@@ -296,8 +304,8 @@ class PuzzleController(SubController):
             self.draw(word)
             # Change the fill of the word and selected cell
             if options.get("highlight") is not False:
-                cell.word[model.direction].fill = settings.appearance.puzzle.highlight.word
-                cell.fill = settings.appearance.puzzle.highlight.letter
+                cell.word[model.direction].update(fill=settings.appearance.puzzle.highlight.word)
+                cell.update(fill=settings.appearance.puzzle.highlight.letter)
             # Draw the word
             self.draw(cell.word[model.direction])
 
@@ -321,7 +329,7 @@ class PuzzleController(SubController):
         self.player.x, self.player.y = x, y
         self.draw(self.player)
         # Update the clues, change window focus, update server
-        self.parent.clues.set_clue(self.model[x, y].word[self.player.direction])
+        self.parent.clues.set_clue(self.model.cells[x, y].word[self.player.direction])
         self.view.canvas.focus_set()
         self.parent.connection.emit(CLIENT_UPDATED, {POSITION: (x, y)})
 

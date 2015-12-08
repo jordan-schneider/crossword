@@ -23,10 +23,15 @@ class View:
         # Padding frame
         self.frame = tk.Frame(self.root)
         self.frame.pack(fill="both", padx=PAD, pady=PAD)
-        # Initialize widget groups
-        self.header = HeaderView(self)
-        self.puzzle = PuzzleView(self)
-        self.clues = CluesView(self)
+        # Initialize header widget
+        self.header_frame = tk.Frame(self.frame)
+        self.puzzle_frame = tk.Frame(self.frame)
+        self.clues_frame = tk.Frame(self.frame)
+        self.load()
+        # Load each subview
+        self.header = HeaderView(self, self.header_frame)
+        self.puzzle = PuzzleView(self, self.puzzle_frame)
+        self.clues = CluesView(self, self.clues_frame)
         # Show widgets
         self.header.show()
         self.puzzle.show()
@@ -35,6 +40,13 @@ class View:
 
     def __repr__(self):
         return "view"
+
+    def load(self):
+        """Load the widgets of the view."""
+        self.header_frame.grid_configure(row=0, column=0, columnspan=4, padx=PAD, pady=(TINY_PAD, PAD), sticky=tk.W+tk.E)
+        self.header_frame.columnconfigure(0, weight=1)
+        self.puzzle_frame.grid_configure(row=1, column=0, padx=PAD, pady=0)
+
 
     def hide(self):
         """Hide the entire view."""
@@ -65,12 +77,12 @@ class SubView:
     access to the important members of each subview.
     """
 
-    def __init__(self, parent: View):
+    def __init__(self, parent: View, frame: tk.Frame):
         """Build the widget group."""
         self.parent = parent
         self.root = self.parent.root
         # Content frame
-        self.frame = tk.Frame(self.parent.frame)
+        self.frame = frame
         # Reference
         self.visible = False
 
@@ -96,9 +108,9 @@ class SubView:
 class HeaderView(SubView):
     """The header group of the crossword application."""
 
-    def __init__(self, parent: View):
+    def __init__(self, parent: View, frame: tk.Frame):
         """Build the header widget group."""
-        super().__init__(parent)
+        super().__init__(parent, frame)
         # Crossword title
         self.title = tk.StringVar(self.root)
         self.title_label = tk.Label(self.frame, textvariable=self.title)
@@ -112,9 +124,6 @@ class HeaderView(SubView):
 
     def load(self):
         """Configure the graphical components of the group."""
-        # Frame
-        self.frame.grid_configure(row=0, column=0, columnspan=4, padx=PAD, pady=(TINY_PAD, PAD), sticky=tk.W+tk.E)
-        self.frame.columnconfigure(0, weight=1)
         # Crossword title
         title_style = {"font": appearance.header.font, "fg": appearance.header.title.fg}
         self.title_label.config(**title_style)
@@ -132,9 +141,9 @@ class HeaderView(SubView):
 class PuzzleView(SubView):
     """The puzzle group of the crossword application."""
 
-    def __init__(self, parent: View):
+    def __init__(self, parent: View, frame: tk.Frame):
         """Build the crossword widget group."""
-        super().__init__(parent)
+        super().__init__(parent, frame)
         # Crossword clue
         self.clue = tk.StringVar(self.root)
         self.clue_label = tk.Label(self.frame, textvariable=self.clue)
@@ -150,7 +159,6 @@ class PuzzleView(SubView):
 
     def load(self, width=DEFAULT_PUZZLE_WIDTH, height=DEFAULT_PUZZLE_HEIGHT):
         """Configure the graphical components of the group."""
-        self.frame.grid_configure(row=1, column=0, padx=PAD, pady=0)
         # Crossword clue
         clue_style = dict(appearance.puzzle.clues)
         self.clue_label.config(**clue_style)
@@ -173,9 +181,9 @@ class PuzzleView(SubView):
 class CluesView(SubView):
     """The clues group of the crossword application."""
 
-    def __init__(self, parent: View):
+    def __init__(self, parent: View, frame: tk.Frame):
         """Build the clues widget group."""
-        super().__init__(parent)
+        super().__init__(parent, frame)
         # Across label
         self.across_label = tk.Label(self.frame)
         # Across frame
@@ -236,9 +244,9 @@ class CluesView(SubView):
 class ChatView(SubView):
     """The chat group of the crossword application."""
 
-    def __init__(self, parent: View):
+    def __init__(self, parent: View, frame: tk.Frame):
         """Build the chat widget group."""
-        super().__init__(parent)
+        super().__init__(parent, frame)
 
     def load(self):
         """Configure the graphical components of the group."""

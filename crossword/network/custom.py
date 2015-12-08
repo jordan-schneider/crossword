@@ -11,7 +11,7 @@ class CrosswordHandler(wrapper.SocketHandler):
     def __init__(self, sock, address, server):
         super().__init__(sock, address, server)
         self.model = model.PlayerModel(name="", color="")
-        self.model.id = self.address[0]
+        self.model.id = id(self)
 
 
 class CrosswordServer(wrapper.SocketServer):
@@ -42,10 +42,11 @@ class CrosswordServer(wrapper.SocketServer):
     def on_client_joined(self, data: dict, handler: CrosswordHandler):
         """Called when a client joins the server."""
         # Update the handler data
-        handler.model.update(data)
-        print("client named '%s' joined as %s" % (handler.model["name"], handler.model.id))
+        handler.model.update(**data)
+        logging.info("%s: client named '%s' joined as %s", self, handler.model["name"], handler.model.id)
         # Update the rest of the clients
         self.update_clients()
+        handler.emit(SERVER_UPDATED, {ID: handler.model.id})
         self.emit(CLIENT_JOINED, data)
         # Check if there is a model
         if not self.model:
@@ -115,7 +116,7 @@ class CrosswordServer(wrapper.SocketServer):
             # Remove the handler to avoid confusion
             copy = models[:]
             copy.remove(handler.model)
-            self.emit(SERVER_UPDATED, {CLIENTS: copy})
+            handler.emit(SERVER_UPDATED, {CLIENTS: copy})
 
 
 class CrosswordConnection(wrapper.SocketConnection):

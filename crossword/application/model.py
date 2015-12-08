@@ -205,6 +205,9 @@ class PlayerModel:
         self.x = 0
         self.y = 0
 
+    def __repr__(self):
+        return str(self.id)
+
     def update(self, **options):
         self.custom.update(options)
 
